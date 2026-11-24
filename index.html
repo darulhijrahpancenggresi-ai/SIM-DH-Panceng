@@ -9,9 +9,6 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- html2pdf.js CDN (Untuk Unduh PDF Raport & Buku) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -89,16 +86,10 @@
       background: #94a3b8;
     }
 
-   /* Print styles & Page setup */
-    @page {
-      size: A4 portrait;
-      margin: 0mm !important; /* Menghilangkan cap tanggal, jam URL, dan judul file browser */
-    }
-
-    @media print {
-      #sidebar, header, #toastNotification, .no-print, button, select, 
-      #tabRaportAlquran, #tabRaportSemester, .mode-switcher,
-      #viewRaport > div:first-child, #viewRaport > div:nth-child(2) {
+    /* Print styles */
+        @media print {
+      /* Sembunyikan elemen navigasi dan tombol sistem saat cetak */
+      #sidebar, header, #toastNotification, .no-print, button, select, #tabRaportAlquran, #tabRaportSemester, .mode-switcher {
         display: none !important;
       }
       body, html {
@@ -118,21 +109,22 @@
         margin: 0 !important;
         max-width: 100% !important;
       }
+      /* Tampilkan hanya view yang aktif saat tombol cetak ditekan */
       section:not(.hidden) {
         display: block !important;
         width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
       }
-      #containerRaportAlquran, #containerRaportSemester, #printableArea {
+      #areaCetakRaport, #containerRaportAlquran, #containerRaportSemester, #printableArea {
         display: block !important;
         visibility: visible !important;
         box-shadow: none !important;
         border: 2pt solid #000000 !important;
-        border-radius: 0 !important;
+        border-radius: 4px !important;
         width: 100% !important;
         margin: 0 auto !important;
-        padding: 10mm 15mm !important;
+        padding: 8mm !important;
         box-sizing: border-box !important;
         page-break-inside: avoid !important;
       }
@@ -597,14 +589,11 @@
                 <i class="fa-solid fa-pen-to-square"></i>
                 <span>Input / Edit Nilai Raport</span>
               </button>
-             <button type="button" onclick="unduhRaportPDFLangsung()" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow transition">
-                <i class="fa-solid fa-file-pdf"></i>
-                <span>Unduh Raport PDF</span>
-              </button>
-              <button type="button" onclick="window.print()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow transition">
+              <button onclick="window.print()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow transition">
                 <i class="fa-solid fa-print"></i>
                 <span>Cetak Lembar Raport</span>
               </button>
+            </div>
           </div>
 
           <!-- Pilihan Tab Format Raport (Sesuai Gambar 1 & Gambar 2) -->
@@ -893,11 +882,7 @@
                 Terintegrasi dengan Google Scholar, SINTA Kemenristek, Google Books, serta unggah berkas e-book santri.
               </p>
             </div>
-         <div class="flex flex-wrap items-center gap-2">
-              <button type="button" onclick="unduhKatalogBukuPDF()" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
-                <i class="fa-solid fa-file-pdf"></i>
-                <span>Unduh Katalog Buku PDF</span>
-              </button>
+            <div class="flex flex-wrap items-center gap-2">
               <button onclick="openModalPinjamBuku()" class="bg-amber-500 hover:bg-amber-600 text-hijau-950 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
                 <i class="fa-solid fa-qrcode"></i>
                 <span>Transaksi Pinjam / Scan</span>
@@ -2169,30 +2154,19 @@
           <input type="text" id="pengumumanJudul" required placeholder="Judul pengumuman..." class="w-full px-3 py-2 border rounded-lg focus:outline-none">
         </div>
 
-     <div>
-          <label class="block font-bold text-slate-700 mb-1">Kategori</label>
-          <select id="pengumumanKategori" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-bold">
-            <option value="Keagamaan">Kepesantrenan</option>
-            <option value="Akademik">Akademik</option>
-            <option value="Kejuruan">Kejuruan / UKK</option>
-            <option value="Umum">Informasi Umum</option>
-          </select>
-        </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Berlaku Mulai</label>
-            <div class="flex gap-1.5">
-              <input type="date" id="pengumumanTglMulai" class="w-2/3 px-2 py-1.5 border rounded-lg text-xs">
-              <input type="time" id="pengumumanJamMulai" value="07:00" class="w-1/3 px-2 py-1.5 border rounded-lg text-xs font-mono">
-            </div>
+            <label class="block font-bold text-slate-700 mb-1">Kategori</label>
+            <select id="pengumumanKategori" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-bold">
+              <option value="Keagamaan">Keagamaan / Kepesantrenan</option>
+              <option value="Akademik">Akademik</option>
+              <option value="Kejuruan">Kejuruan / UKK</option>
+              <option value="Umum">Informasi Umum</option>
+            </select>
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Berlaku Sampai</label>
-            <div class="flex gap-1.5">
-              <input type="date" id="pengumumanTglSelesai" class="w-2/3 px-2 py-1.5 border rounded-lg text-xs">
-              <input type="time" id="pengumumanJamSelesai" value="16:00" class="w-1/3 px-2 py-1.5 border rounded-lg text-xs font-mono">
-            </div>
+            <label class="block font-bold text-slate-700 mb-1">Tanggal</label>
+            <input type="date" id="pengumumanTanggal" class="w-full px-3 py-2 border rounded-lg focus:outline-none">
           </div>
         </div>
 
@@ -2386,7 +2360,11 @@
         { id: "S05", nis: "240105", nama: "Zainal Abidin", jk: "L", kelasId: "K01", jurusanId: "J01", telp: "085712340005", ortu: "Bpk. Mas'ud", telpOrtu: "085799990005", status: "Aktif", qrToken: "DH-BC-240105-654", foto: "" },
         { id: "S06", nis: "240106", nama: "Dewi Safitri", jk: "P", kelasId: "K02", jurusanId: "J02", telp: "085712340006", ortu: "Ibu Hartatik", telpOrtu: "085799990006", status: "Aktif", qrToken: "DH-BC-240106-321", foto: "" }
       ],
-     absensi: [],
+      absensi: [
+        { id: "ABS-01", siswaId: "S01", tanggal: "2026-11-22", waktu: "06:48:12", tipe: "MASUK", status: "HADIR", metode: "BARCODE", keterangan: "Tepat Waktu", petugas: "Tata Usaha" },
+        { id: "ABS-02", siswaId: "S02", tanggal: "2026-11-22", waktu: "07:05:40", tipe: "MASUK", status: "HADIR", metode: "BARCODE", keterangan: "Tepat Waktu", petugas: "Tata Usaha" },
+        { id: "ABS-03", siswaId: "S03", tanggal: "2026-11-22", waktu: "07:22:15", tipe: "MASUK", status: "TERLAMBAT", metode: "BARCODE", keterangan: "Terlambat 7 menit", petugas: "Tata Usaha" }
+      ],
       buku: [
         { id: "BK01", barcode: "BK-TKJ-01", judul: "Administrasi Server Jaringan Linux", pengarang: "Onno W. Purbo", penerbit: "Andi Publisher", kategori: "Teknologi & Kejuruan", stok: 8, fileEbook: "Modul_Linux_Server.pdf" },
         { id: "BK02", barcode: "BK-RPL-02", judul: "Dasar Pemrograman Web Fullstack", pengarang: "Budi Raharjo", penerbit: "Informatika", kategori: "Teknologi & Kejuruan", stok: 12, fileEbook: "Web_Fullstack.pdf" },
@@ -2538,15 +2516,54 @@
       img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
     }
 
-   function handleUploadFotoTU(e) {
+    // UPLOAD FOTO PROFIL HANDLERS (BASE64 ENCODING)
+    function handleUploadFotoTU(e) {
       const file = e.target.files[0];
       if (file) {
-        openImageCropper(file, (croppedDataUrl) => {
-          DB.operatorTU.foto = croppedDataUrl;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          DB.operatorTU.foto = event.target.result;
           persistDatabase();
-          renderAvatarTU();
-          showToast("Foto profil Operator Tata Usaha diperbarui!");
+                renderAvatarTU();
+      renderUploadedAssets();
+
+      // Form Simpan Nilai Raport Santri (Format 1 & 2)
+      const formRaport = document.getElementById("formSaveRaportData");
+      if (formRaport) {
+        formRaport.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const santriId = document.getElementById("inputRaportSiswaSelect").value;
+          if (!santriId) return;
+
+          if (!DB.raportCustom) DB.raportCustom = {};
+          DB.raportCustom[santriId] = {
+            tahsinJilid: document.getElementById("inpTahsinJilid").value.trim() || "IV",
+            tahsinHal: document.getElementById("inpTahsinHal").value.trim() || "1 - 40",
+            tahsinNilai: parseInt(document.getElementById("inpTahsinNilai").value) || 92,
+            tahfidzNilai: parseInt(document.getElementById("inpTahfidzNilai").value) || 91,
+            pengajarAlquran: document.getElementById("inpPengajarAlquran").value.trim() || "M. Ridwan, M.Pd.I",
+            adabAkhlak: document.getElementById("inpAdabAkhlak").value.trim(),
+            mapelBarab: parseInt(document.getElementById("inpMapelBarab").value) || 90,
+            mapelAkhlaq: parseInt(document.getElementById("inpMapelAkhlaq").value) || 92,
+            mapelFiqih: parseInt(document.getElementById("inpMapelFiqih").value) || 90,
+            mapelTarikh: parseInt(document.getElementById("inpMapelTarikh").value) || 88,
+            mapelQuran: parseInt(document.getElementById("inpMapelQuran").value) || 95,
+            mapelTilawati: parseInt(document.getElementById("inpMapelTilawati").value) || 90,
+            mapelSurah: parseInt(document.getElementById("inpMapelSurah").value) || 94,
+            mapelDoa: parseInt(document.getElementById("inpMapelDoa").value) || 90,
+            mapelKejuruan: parseInt(document.getElementById("inpMapelKejuruan").value) || 92,
+            catatanWali: document.getElementById("inpCatatanWali").value.trim()
+          };
+
+          persistDatabase();
+          closeModalInputRaport();
+          renderLembarRaport();
+          showToast("Data nilai raport santri berhasil disimpan!");
         });
+      }
+          showToast("Foto profil Operator Tata Usaha diperbarui!");
+        };
+        reader.readAsDataURL(file);
       }
     }
 
@@ -2559,96 +2576,27 @@
       }
     }
 
-    // ================= FITUR CROP & ZOOM FOTO SEBELUM UNGGAH =================
-    let cropperCallback = null;
-    let cropperRawImg = null;
-    let cropperScale = 1;
-
-    function openImageCropper(file, onConfirmed) {
-      if (!file) return;
-      cropperCallback = onConfirmed;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        cropperRawImg = new Image();
-        cropperRawImg.onload = () => {
-          cropperScale = 1;
-          const preview = document.getElementById("previewCropImg");
-          preview.src = e.target.result;
-          preview.style.transform = "scale(1)";
-          document.getElementById("zoomFotoRange").value = 1;
-          document.getElementById("modalCropFoto").classList.remove("hidden");
-        };
-        cropperRawImg.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function applyFotoZoom(val) {
-      cropperScale = parseFloat(val);
-      const preview = document.getElementById("previewCropImg");
-      if (preview) {
-        preview.style.transform = `scale(${cropperScale})`;
-      }
-    }
-
-    function konfirmasiCropFoto() {
-      if (!cropperRawImg) return;
-      const canvas = document.createElement("canvas");
-      canvas.width = 400;
-      canvas.height = 500;
-      const ctx = canvas.getContext("2d");
-
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const targetRatio = canvas.width / canvas.height;
-      const imgRatio = cropperRawImg.width / cropperRawImg.height;
-      let drawW, drawH;
-
-      if (imgRatio > targetRatio) {
-        drawH = canvas.height * cropperScale;
-        drawW = (drawH * imgRatio);
-      } else {
-        drawW = canvas.width * cropperScale;
-        drawH = (drawW / imgRatio);
-      }
-
-      const dx = (canvas.width - drawW) / 2;
-      const dy = (canvas.height - drawH) / 2;
-      ctx.drawImage(cropperRawImg, dx, dy, drawW, drawH);
-
-      const croppedUrl = canvas.toDataURL("image/jpeg", 0.92);
-      if (cropperCallback) {
-        cropperCallback(croppedUrl);
-      }
-      batalCropFoto();
-    }
-
-    function batalCropFoto() {
-      document.getElementById("modalCropFoto").classList.add("hidden");
-      cropperCallback = null;
-      cropperRawImg = null;
-    }
-
     function previewUploadFotoSiswa(e) {
       const file = e.target.files[0];
       if (file) {
-        openImageCropper(file, (croppedDataUrl) => {
-          document.getElementById("siswaFotoData").value = croppedDataUrl;
-          document.getElementById("previewFotoSiswa").innerHTML = `<img src="${croppedDataUrl}" class="w-full h-full object-cover">`;
-          showToast("Foto santri berhasil disesuaikan!");
-        });
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.getElementById("siswaFotoData").value = event.target.result;
+          document.getElementById("previewFotoSiswa").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
       }
     }
 
     function previewUploadFotoGuru(e) {
       const file = e.target.files[0];
       if (file) {
-        openImageCropper(file, (croppedDataUrl) => {
-          document.getElementById("guruFotoData").value = croppedDataUrl;
-          document.getElementById("previewFotoGuru").innerHTML = `<img src="${croppedDataUrl}" class="w-full h-full object-cover">`;
-          showToast("Foto guru berhasil disesuaikan!");
-        });
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.getElementById("guruFotoData").value = event.target.result;
+          document.getElementById("previewFotoGuru").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
       }
     }
 
@@ -4092,7 +4040,89 @@
       }
       modal.classList.remove("hidden");
     }
-function renderPeminjamanTable() {
+
+    function closeModalSiswa() {
+      document.getElementById("modalSiswa").classList.add("hidden");
+    }
+
+    function editSiswa(id) {
+      openModalSiswa(id);
+    }
+
+    function deleteSiswa(id) {
+      const s = DB.siswa.find(item => item.id === id);
+      if (!s) return;
+      if (confirm(`Hapus santri ${s.nama} (${s.nis})?`)) {
+        DB.siswa = DB.siswa.filter(item => item.id !== id);
+        persistDatabase();
+        renderSiswaTable();
+        updateDashboardMetrics();
+        showToast(`Santri ${s.nama} berhasil dihapus.`);
+      }
+    }
+
+    function exportSiswaCSV() {
+      let csv = "NIS,NAMA_SANTRI,KELAS,JURUSAN,WALI_SANTRI,NO_WA,STATUS\n";
+      DB.siswa.forEach(s => {
+        const k = DB.kelas.find(item => item.id === s.kelasId)?.nama || "-";
+        const j = DB.jurusan.find(item => item.id === s.jurusanId)?.singkatan || "-";
+        csv += `"${s.nis}","${s.nama}","${k}","${j}","${s.ortu}","${s.telpOrtu}","${s.status}"\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `data_santri_smk_darul_hijrah_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Ekspor berkas CSV santri berhasil.");
+    }
+
+    // MODUL PERPUSTAKAAN (TABEL & CRUD)
+    function switchTabPerpus(tab) {
+      if (tab === 'katalog') {
+        document.getElementById('contentPerpusKatalog').classList.remove('hidden');
+        document.getElementById('contentPerpusSirkulasi').classList.add('hidden');
+        document.getElementById('tabPerpusKatalog').className = 'pb-2 border-b-2 border-hijau-800 text-hijau-800';
+        document.getElementById('tabPerpusSirkulasi').className = 'pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800';
+      } else {
+        document.getElementById('contentPerpusKatalog').classList.add('hidden');
+        document.getElementById('contentPerpusSirkulasi').classList.remove('hidden');
+        document.getElementById('tabPerpusKatalog').className = 'pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800';
+        document.getElementById('tabPerpusSirkulasi').className = 'pb-2 border-b-2 border-hijau-800 text-hijau-800';
+      }
+    }
+
+    function renderBukuTable() {
+      const tbody = document.getElementById("bukuTbody");
+      if (!tbody) return;
+      tbody.innerHTML = DB.buku.map(b => `
+        <tr class="hover:bg-teal-50/40 transition">
+          <td class="py-3 px-4">
+            <div class="w-16">
+              ${generateSquareBarcodeSVG(b.barcode, 60)}
+              <span class="font-mono text-[9px] text-hijau-800 font-bold block text-center mt-0.5">${b.barcode}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 font-bold text-slate-900">
+            <div>${b.judul}</div>
+            ${b.fileEbook ? `<span class="inline-flex items-center gap-1 text-[10px] text-teal-700 font-medium mt-0.5"><i class="fa-solid fa-file-pdf text-red-600"></i> ${b.fileEbook}</span>` : ''}
+          </td>
+          <td class="py-3 px-4 text-slate-600">${b.pengarang} - ${b.penerbit}</td>
+          <td class="py-3 px-4"><span class="bg-teal-50 text-hijau-800 border border-teal-200 px-2 py-0.5 rounded text-[10px] font-bold">${b.kategori}</span></td>
+          <td class="py-3 px-4 text-center font-mono font-bold text-hijau-800">${b.stok} Exp</td>
+          <td class="py-3 px-4 text-center">
+            <div class="flex items-center justify-center gap-1.5">
+              <button onclick="editBuku('${b.id}')" class="p-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button onclick="deleteBuku('${b.id}')" class="p-1.5 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function renderPeminjamanTable() {
       const tbody = document.getElementById("peminjamanTbody");
       if (!tbody) return;
       tbody.innerHTML = DB.peminjaman.map(p => {
@@ -4110,46 +4140,26 @@ function renderPeminjamanTable() {
               <div class="font-bold text-slate-900">${buku.judul}</div>
               <div class="text-[10px] text-hijau-800 font-mono">${buku.barcode}</div>
             </td>
-            <td class="py-3 px-4 font-mono text-xs">${p.waktuPinjamRealtime || p.tglPinjam}</td>
-            <td class="py-3 px-4 font-mono text-xs font-bold text-amber-700">${p.tglTempo}</td>
+            <td class="py-3 px-4 font-mono">${p.tglPinjam}</td>
+            <td class="py-3 px-4 font-mono font-bold text-amber-700">${p.tglTempo}</td>
             <td class="py-3 px-4">
               <span class="px-2.5 py-0.5 rounded text-[10px] font-bold ${isPinjam ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}">
                 ${p.status}
               </span>
-              ${p.waktuKembaliRealtime ? `<div class="text-[9px] font-mono text-green-700 mt-0.5">${p.waktuKembaliRealtime}</div>` : ''}
             </td>
             <td class="py-3 px-4 text-center">
-              <div class="flex items-center justify-center gap-1">
-                ${isPinjam ? `
-                  <button onclick="kembalikanBuku('${p.id}')" class="px-2 py-1 bg-hijau-800 hover:bg-hijau-900 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow">
-                    <i class="fa-solid fa-rotate-left"></i> Kembali
-                  </button>
-                ` : ''}
-                <button onclick="editPeminjaman('${p.id}')" class="p-1 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded text-xs" title="Edit Tempo"><i class="fa-solid fa-pen-to-square"></i></button>
-                <button onclick="hapusPeminjaman('${p.id}')" class="p-1 text-red-700 bg-red-50 hover:bg-red-100 rounded text-xs" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
-              </div>
+              ${isPinjam ? `
+                <button onclick="kembalikanBuku('${p.id}')" class="px-3 py-1 bg-hijau-800 hover:bg-hijau-900 text-white rounded text-[10px] font-bold flex items-center gap-1 mx-auto shadow">
+                  <i class="fa-solid fa-rotate-left"></i> Kembalikan
+                </button>
+              ` : `<span class="text-[10px] text-slate-400 italic font-medium">Selesai</span>`}
             </td>
           </tr>
         `;
       }).join("");
     }
 
-    function kembalikanBuku(pId) {
-      const p = DB.peminjaman.find(item => item.id === pId);
-      if (p) {
-        const now = new Date();
-        const timeStr = now.toISOString().split("T")[0] + " " + now.toTimeString().substring(0, 8) + " WIB";
-        p.status = "KEMBALI";
-        p.waktuKembaliRealtime = timeStr;
-        const b = DB.buku.find(item => item.id === p.bukuId);
-        if (b) b.stok += 1;
-        persistDatabase();
-        renderPeminjamanTable();
-        renderBukuTable();
-        showToast("Buku dikembalikan pada " + timeStr);
-      }
-    }
-        function openModalBuku(id = null) {
+    function openModalBuku(id = null) {
       const modal = document.getElementById("modalBuku");
       const title = document.getElementById("modalBukuTitle");
       const form = document.getElementById("formSaveBuku");
@@ -5091,27 +5101,17 @@ function renderPeminjamanTable() {
           const editId = document.getElementById("pengumumanEditId").value;
           const judul = document.getElementById("pengumumanJudul").value.trim();
           const kategori = document.getElementById("pengumumanKategori").value;
-          const tglMulai = document.getElementById("pengumumanTglMulai").value;
-          const jamMulai = document.getElementById("pengumumanJamMulai").value || "07:00";
-          const tglSelesai = document.getElementById("pengumumanTglSelesai").value;
-          const jamSelesai = document.getElementById("pengumumanJamSelesai").value || "16:00";
-          const rentangTanggal = `${tglMulai} (${jamMulai}) s/d ${tglSelesai} (${jamSelesai})`;
+          const tanggal = document.getElementById("pengumumanTanggal").value;
           const isi = document.getElementById("pengumumanIsi").value.trim();
 
           if (editId) {
             const p = DB.pengumuman.find(item => item.id === editId);
             if (p) {
-              Object.assign(p, { judul, kategori, tanggal: rentangTanggal, tglMulai, jamMulai, tglSelesai, jamSelesai, isi });
+              Object.assign(p, { judul, kategori, tanggal, isi });
               showToast("Pengumuman diperbarui.");
             }
           } else {
-            DB.pengumuman.unshift({ 
-              id: `P-${Date.now()}`, 
-              judul, kategori, 
-              tanggal: rentangTanggal, 
-              tglMulai, jamMulai, tglSelesai, jamSelesai, 
-              isi 
-            });
+            DB.pengumuman.unshift({ id: `P-${Date.now()}`, judul, kategori, tanggal, isi });
             showToast("Pengumuman dipublikasikan.");
           }
           persistDatabase();
@@ -5229,139 +5229,11 @@ function renderPeminjamanTable() {
         selectRap.innerHTML = DB.siswa.map(s => `<option value="${s.id}">${s.nama} (${s.nis})</option>`).join("");
       }
 
-    // ================= FUNGSI UNDUH PDF RAPORT & KATALOG BUKU =================
-      window.unduhRaportPDFLangsung = function() {
-        const activeEl = currentRaportTab === "alquran" 
-          ? document.getElementById("containerRaportAlquran") 
-          : document.getElementById("containerRaportSemester");
-        if (!activeEl) return;
-        
-        const select = document.getElementById("selectSantriRaport");
-        const santriNama = select ? select.options[select.selectedIndex]?.text.replace(/[^a-zA-Z0-9]/g, '_') : 'Santri';
-        
-        showToast("Sedang membuat berkas PDF Raport...", "info");
-        const opt = {
-          margin: [8, 8, 8, 8],
-          filename: `Raport_${santriNama}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(activeEl).save().then(() => {
-          showToast("Raport PDF berhasil diunduh!");
-        });
-      };
-
-      window.unduhKatalogBukuPDF = function() {
-        const el = document.getElementById("contentPerpusKatalog");
-        if (!el) return;
-        showToast("Sedang membuat PDF Katalog Buku...", "info");
-        const opt = {
-          margin: [8, 8, 8, 8],
-          filename: `Katalog_Buku_Perpustakaan_${Date.now()}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        };
-        html2pdf().set(opt).from(el).save().then(() => {
-          showToast("Katalog Buku PDF berhasil diunduh!");
-        });
-      };
-
-      window.editPeminjaman = function(id) {
-        const p = DB.peminjaman.find(item => item.id === id);
-        if (!p) return;
-        const tglTempoBaru = prompt("Ubah tanggal jatuh tempo (YYYY-MM-DD):", p.tglTempo);
-        if (tglTempoBaru) {
-          p.tglTempo = tglTempoBaru;
-          persistDatabase();
-          renderPeminjamanTable();
-          showToast("Jatuh tempo peminjaman diperbarui!");
-        }
-      };
-
-      window.hapusPeminjaman = function(id) {
-        if (confirm("Hapus data peminjaman ini?")) {
-          DB.peminjaman = DB.peminjaman.filter(p => p.id !== id);
-          persistDatabase();
-          renderPeminjamanTable();
-          if (typeof renderRiwayatPerpusTable === "function") renderRiwayatPerpusTable();
-          showToast("Data peminjaman dihapus!");
-        }
-      };
-
-      // Form Simpan Nilai Raport Santri (Memastikan tombol simpan nilai 100% berfungsi)
-      const formRaport = document.getElementById("formSaveRaportData");
-      if (formRaport) {
-        formRaport.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const santriId = document.getElementById("inputRaportSiswaSelect").value;
-          if (!santriId) return;
-
-          if (!DB.raportCustom) DB.raportCustom = {};
-          DB.raportCustom[santriId] = {
-            tahsinJilid: document.getElementById("inpTahsinJilid").value.trim() || "IV",
-            tahsinHal: document.getElementById("inpTahsinHal").value.trim() || "1 - 40",
-            tahsinNilai: parseInt(document.getElementById("inpTahsinNilai").value) || 92,
-            tahfidzNilai: parseInt(document.getElementById("inpTahfidzNilai").value) || 91,
-            pengajarAlquran: document.getElementById("inpPengajarAlquran").value.trim() || "M. Ridwan, M.Pd.I",
-            adabAkhlak: document.getElementById("inpAdabAkhlak").value.trim(),
-            mapelBarab: parseInt(document.getElementById("inpMapelBarab").value) || 90,
-            mapelAkhlaq: parseInt(document.getElementById("inpMapelAkhlaq").value) || 92,
-            mapelFiqih: parseInt(document.getElementById("inpMapelFiqih").value) || 90,
-            mapelTarikh: parseInt(document.getElementById("inpMapelTarikh").value) || 88,
-            mapelQuran: parseInt(document.getElementById("inpMapelQuran").value) || 95,
-            mapelTilawati: parseInt(document.getElementById("inpMapelTilawati").value) || 90,
-            mapelSurah: parseInt(document.getElementById("inpMapelSurah").value) || 94,
-            mapelDoa: parseInt(document.getElementById("inpMapelDoa").value) || 90,
-            mapelKejuruan: parseInt(document.getElementById("inpMapelKejuruan").value) || 92,
-            catatanWali: document.getElementById("inpCatatanWali").value.trim()
-          };
-
-          persistDatabase();
-          closeModalInputRaport();
-          renderLembarRaport();
-          showToast("Data nilai raport santri berhasil disimpan!");
-        });
-      }
-
       // Bangun menu navigasi & muat dashboard utama
       startRealtimeClock();
       buildSidebarMenu();
       navigateTo("dashboard");
     });
   </script>
-  <!-- ================= MODAL CROP & SESUAIKAN UKURAN FOTO ================= -->
-  <div id="modalCropFoto" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl text-center space-y-4">
-      <div class="flex items-center justify-between pb-2 border-b">
-        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-          <i class="fa-solid fa-crop-simple text-hijau-800"></i>
-          <span>Sesuaikan Ukuran & Posisi Foto</span>
-        </h3>
-        <button type="button" onclick="batalCropFoto()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-
-      <div class="relative w-48 h-56 mx-auto overflow-hidden rounded-xl border-2 border-dashed border-teal-600 bg-slate-100 flex items-center justify-center">
-        <img id="previewCropImg" src="" class="absolute max-w-none transition-transform" alt="Preview Foto">
-      </div>
-
-      <div class="space-y-1">
-        <div class="flex justify-between text-[11px] font-bold text-slate-600">
-          <span>Kecil</span>
-          <span>Perbesar / Perkecil Foto</span>
-          <span>Besar</span>
-        </div>
-        <input type="range" id="zoomFotoRange" min="0.4" max="2.5" step="0.05" value="1" class="w-full accent-teal-800" oninput="applyFotoZoom(this.value)">
-      </div>
-
-      <div class="flex gap-2 justify-end pt-2 border-t">
-        <button type="button" onclick="batalCropFoto()" class="px-3 py-1.5 text-xs text-slate-600 bg-slate-100 rounded-lg font-bold">Batal</button>
-        <button type="button" onclick="konfirmasiCropFoto()" class="px-4 py-1.5 text-xs text-white bg-hijau-800 rounded-lg font-bold shadow hover:bg-hijau-900">
-          <i class="fa-solid fa-check mr-1"></i> Terapkan Foto
-        </button>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
