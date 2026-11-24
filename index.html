@@ -8,6 +8,11 @@
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- jsQR for super-fast barcode & QR scanning -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- html2pdf for direct PDF export without print dialog -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -47,14 +52,10 @@
     }
   </script>
   <script type="module">
-  // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
   const firebaseConfig = {
     apiKey: "AIzaSyDq-zObTuJk0aIwdKhzhurW7eZz3xozkpk",
     authDomain: "sim-dh-panceng.firebaseapp.com",
@@ -65,9 +66,40 @@
     measurementId: "G-67RWE890YB"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
+  const firestoreDb = getFirestore(app);
+
+  window.firebaseSync = {
+    db: firestoreDb,
+    save: async function(data) {
+      try {
+        await setDoc(doc(firestoreDb, "sims_data", "main_database"), data);
+      } catch (err) {
+        console.warn("Firebase sync error:", err);
+      }
+    }
+  };
+
+  // Real-time listener: data otomatis tersinkron antar-perangkat secara real-time!
+  try {
+    onSnapshot(doc(firestoreDb, "sims_data", "main_database"), (docSnap) => {
+      if (docSnap.exists()) {
+        const cloudData = docSnap.data();
+        if (cloudData && typeof cloudData === "object") {
+          window.DB = { ...window.DB, ...cloudData };
+          localStorage.setItem("SIMS_DARUL_HIJRAH_PANCENG_DATA_V5", JSON.stringify(window.DB));
+          if (typeof refreshActiveViews === "function") {
+            refreshActiveViews();
+          }
+        }
+      }
+    }, (error) => {
+      console.warn("Firestore snapshot listener:", error);
+    });
+  } catch (e) {
+    console.warn("Firestore listener init:", e);
+  }
 </script>
   <style>
     /* Styling scrollbar */
@@ -328,9 +360,14 @@
                   <span class="w-2.5 h-2.5 rounded-full bg-hijau-800 animate-ping"></span>
                   <h3 class="text-sm font-bold text-slate-900">Aktivitas Presensi Terkini Hari Ini</h3>
                 </div>
-                <button onclick="navigateTo('scan')" class="text-xs text-hijau-800 font-bold hover:underline">
-                  Scan Baru &rarr;
-                </button>
+                <div class="flex items-center gap-2">
+                  <button onclick="kosongkanPresensiHariIni()" class="text-[11px] text-red-600 hover:text-red-800 font-bold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-200 transition">
+                    <i class="fa-solid fa-trash-can"></i> Bersihkan Log
+                  </button>
+                  <button onclick="navigateTo('scan')" class="text-xs text-hijau-800 font-bold hover:underline">
+                    Scan Baru &rarr;
+                  </button>
+                </div>
               </div>
 
               <div class="overflow-x-auto">
@@ -342,6 +379,7 @@
                       <th class="py-2.5 px-3 font-semibold">Kelas</th>
                       <th class="py-2.5 px-3 font-semibold">Metode</th>
                       <th class="py-2.5 px-3 font-semibold">Status</th>
+                      <th class="py-2.5 px-3 font-semibold text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody id="dashAttendanceTbody" class="divide-y divide-slate-100">
@@ -1098,6 +1136,7 @@
                       <th class="py-3 px-4 font-semibold">Status</th>
                       <th class="py-3 px-4 font-semibold">Keterangan</th>
                       <th class="py-3 px-4 font-semibold">Verifikator</th>
+                      <th class="py-3 px-4 font-semibold text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody id="riwayatTbody" class="divide-y divide-slate-100">
@@ -1119,6 +1158,7 @@
                     <th class="py-3 px-4 font-semibold">Buku Terkait</th>
                     <th class="py-3 px-4 font-semibold">Status Pustaka</th>
                     <th class="py-3 px-4 font-semibold">Petugas TU</th>
+                    <th class="py-3 px-4 font-semibold text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="riwayatPerpusTbody" class="divide-y divide-slate-100">
@@ -1530,6 +1570,63 @@
 
   <!-- ================= MODALS SECTION ================= -->
 
+  <!-- Modal Resize & Sesuaikan Ukuran Gambar Sebelum Konfirmasi -->
+  <div id="modalResizeGambar" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-crop-simple text-amber-500"></i>
+          <span>Ubah Ukuran Gambar Sebelum Konfirmasi</span>
+        </h3>
+        <button onclick="batalResizeGambar()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Canvas Preview Area -->
+        <div class="w-full h-64 bg-slate-100 rounded-xl border border-slate-300 flex items-center justify-center overflow-hidden relative">
+          <canvas id="resizeCanvas" class="max-w-full max-h-full object-contain shadow"></canvas>
+        </div>
+
+        <!-- Slider Controls -->
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-700">Skala / Perbesar-Perkecil Gambar:</label>
+            <span id="labelZoomGambar" class="font-mono font-bold text-hijau-800">100%</span>
+          </div>
+          <input type="range" id="sliderZoomGambar" min="30" max="250" value="100" class="w-full accent-hijau-800" oninput="updateCanvasZoom(this.value)">
+
+          <div class="grid grid-cols-2 gap-3 pt-2">
+            <div>
+              <label class="block text-[10px] text-slate-500 font-bold mb-1">Maksimal Lebar (Pixel)</label>
+              <select id="selectMaxDimensi" class="w-full px-2 py-1.5 border rounded-lg text-xs" onchange="renderCanvasSource()">
+                <option value="400">400 x 400 px (Pas Foto / Profil)</option>
+                <option value="600" selected>600 x 600 px (Standar Sedang)</option>
+                <option value="1000">1000 x 1000 px (Kop Surat / Resolusi Tinggi)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-500 font-bold mb-1">Rotasi Gambar</label>
+              <button type="button" onclick="rotasiCanvasGambar()" class="w-full px-2 py-1.5 bg-slate-100 hover:bg-slate-200 border rounded-lg text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-rotate-right"></i> Putar 90&deg;
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t flex justify-end gap-2 text-xs">
+        <button type="button" onclick="batalResizeGambar()" class="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-50">Batal</button>
+        <button type="button" onclick="konfirmasiSimpanGambar()" class="px-5 py-2 bg-hijau-800 hover:bg-hijau-900 text-white font-bold rounded-lg shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-check"></i>
+          <span>Konfirmasi & Gunakan Gambar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
     <!-- Modal Input / Edit Nilai Raport Santri (Format 1 & Format 2) -->
   <div id="modalInputRaport" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[92vh]">
@@ -1621,7 +1718,7 @@
               <input type="number" id="inpMapelTilawati" min="0" max="100" class="w-full p-1.5 border rounded font-mono">
             </div>
             <div>
-              <label class="block text-[10px] text-slate-600">Kejuruan Produktif (0-100)</label>
+              <label class="block text-[10px] text-slate-600">Hadits (0-100)</label>
               <input type="number" id="inpMapelKejuruan" min="0" max="100" class="w-full p-1.5 border rounded font-mono font-bold text-hijau-900">
             </div>
           </div>
@@ -2360,11 +2457,7 @@
         { id: "S05", nis: "240105", nama: "Zainal Abidin", jk: "L", kelasId: "K01", jurusanId: "J01", telp: "085712340005", ortu: "Bpk. Mas'ud", telpOrtu: "085799990005", status: "Aktif", qrToken: "DH-BC-240105-654", foto: "" },
         { id: "S06", nis: "240106", nama: "Dewi Safitri", jk: "P", kelasId: "K02", jurusanId: "J02", telp: "085712340006", ortu: "Ibu Hartatik", telpOrtu: "085799990006", status: "Aktif", qrToken: "DH-BC-240106-321", foto: "" }
       ],
-      absensi: [
-        { id: "ABS-01", siswaId: "S01", tanggal: "2026-11-22", waktu: "06:48:12", tipe: "MASUK", status: "HADIR", metode: "BARCODE", keterangan: "Tepat Waktu", petugas: "Tata Usaha" },
-        { id: "ABS-02", siswaId: "S02", tanggal: "2026-11-22", waktu: "07:05:40", tipe: "MASUK", status: "HADIR", metode: "BARCODE", keterangan: "Tepat Waktu", petugas: "Tata Usaha" },
-        { id: "ABS-03", siswaId: "S03", tanggal: "2026-11-22", waktu: "07:22:15", tipe: "MASUK", status: "TERLAMBAT", metode: "BARCODE", keterangan: "Terlambat 7 menit", petugas: "Tata Usaha" }
-      ],
+      absensi: [],
       buku: [
         { id: "BK01", barcode: "BK-TKJ-01", judul: "Administrasi Server Jaringan Linux", pengarang: "Onno W. Purbo", penerbit: "Andi Publisher", kategori: "Teknologi & Kejuruan", stok: 8, fileEbook: "Modul_Linux_Server.pdf" },
         { id: "BK02", barcode: "BK-RPL-02", judul: "Dasar Pemrograman Web Fullstack", pengarang: "Budi Raharjo", penerbit: "Informatika", kategori: "Teknologi & Kejuruan", stok: 12, fileEbook: "Web_Fullstack.pdf" },
@@ -2416,6 +2509,21 @@
 
     function persistDatabase() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      if (window.firebaseSync && typeof window.firebaseSync.save === "function") {
+        window.firebaseSync.save(DB);
+      }
+    }
+
+    function refreshActiveViews() {
+      if (typeof updateDashboardMetrics === "function") updateDashboardMetrics();
+      if (typeof renderSiswaTable === "function") renderSiswaTable();
+      if (typeof renderKartuSiswa === "function") renderKartuSiswa();
+      if (typeof renderLembarRaport === "function") renderLembarRaport();
+      if (typeof renderBukuTable === "function") renderBukuTable();
+      if (typeof renderPeminjamanTable === "function") renderPeminjamanTable();
+      if (typeof renderSarprasTable === "function") renderSarprasTable();
+      if (typeof renderRiwayatTable === "function") renderRiwayatTable();
+      if (typeof renderOfficialReport === "function") renderOfficialReport();
     }
 
     function resetDataKeDefault() {
@@ -2522,10 +2630,18 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          DB.operatorTU.foto = event.target.result;
-          persistDatabase();
-                renderAvatarTU();
-      renderUploadedAssets();
+          bukaModalResizeGambar(event.target.result, (resized) => {
+            DB.operatorTU.foto = resized;
+            persistDatabase();
+            renderAvatarTU();
+            renderUploadedAssets();
+            showToast("Foto profil Operator Tata Usaha diperbarui!");
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    function _dummy_unused_tu() {
 
       // Form Simpan Nilai Raport Santri (Format 1 & 2)
       const formRaport = document.getElementById("formSaveRaportData");
@@ -2567,6 +2683,87 @@
       }
     }
 
+    
+    let currentRawImage = new Image();
+    let currentImageCallback = null;
+    let currentRotation = 0;
+    let currentScale = 1;
+
+    function bukaModalResizeGambar(base64Data, onConfirmCallback) {
+      currentImageCallback = onConfirmCallback;
+      currentRotation = 0;
+      currentScale = 1;
+      document.getElementById("sliderZoomGambar").value = 100;
+      document.getElementById("labelZoomGambar").innerText = "100%";
+
+      currentRawImage = new Image();
+      currentRawImage.onload = function() {
+        renderCanvasSource();
+        document.getElementById("modalResizeGambar").classList.remove("hidden");
+      };
+      currentRawImage.src = base64Data;
+    }
+
+    function batalResizeGambar() {
+      document.getElementById("modalResizeGambar").classList.add("hidden");
+      currentImageCallback = null;
+    }
+
+    function updateCanvasZoom(val) {
+      currentScale = val / 100;
+      document.getElementById("labelZoomGambar").innerText = `${val}%`;
+      renderCanvasSource();
+    }
+
+    function rotasiCanvasGambar() {
+      currentRotation = (currentRotation + 90) % 360;
+      renderCanvasSource();
+    }
+
+    function renderCanvasSource() {
+      const canvas = document.getElementById("resizeCanvas");
+      if (!canvas || !currentRawImage.src) return;
+      const ctx = canvas.getContext("2d");
+
+      const maxDim = parseInt(document.getElementById("selectMaxDimensi")?.value || 600);
+      let targetW = currentRawImage.width;
+      let targetH = currentRawImage.height;
+
+      // Rasio ukuran
+      if (targetW > maxDim || targetH > maxDim) {
+        if (targetW > targetH) {
+          targetH = Math.round(targetH * (maxDim / targetW));
+          targetW = maxDim;
+        } else {
+          targetW = Math.round(targetW * (maxDim / targetH));
+          targetH = maxDim;
+        }
+      }
+
+      const isRotated = currentRotation === 90 || currentRotation === 270;
+      canvas.width = isRotated ? targetH : targetW;
+      canvas.height = isRotated ? targetW : targetH;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((currentRotation * Math.PI) / 180);
+      ctx.scale(currentScale, currentScale);
+      ctx.drawImage(currentRawImage, -targetW / 2, -targetH / 2, targetW, targetH);
+      ctx.restore();
+    }
+
+    function konfirmasiSimpanGambar() {
+      const canvas = document.getElementById("resizeCanvas");
+      if (!canvas) return;
+      const resultBase64 = canvas.toDataURL("image/jpeg", 0.9);
+      if (typeof currentImageCallback === "function") {
+        currentImageCallback(resultBase64);
+      }
+      document.getElementById("modalResizeGambar").classList.add("hidden");
+      showToast("Ukuran gambar berhasil disesuaikan dan diterapkan.");
+    }
+
     function renderAvatarTU() {
       const av = document.getElementById("avatarTU");
       if (DB.operatorTU && DB.operatorTU.foto) {
@@ -2581,8 +2778,10 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          document.getElementById("siswaFotoData").value = event.target.result;
-          document.getElementById("previewFotoSiswa").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
+          bukaModalResizeGambar(event.target.result, (resized) => {
+            document.getElementById("siswaFotoData").value = resized;
+            document.getElementById("previewFotoSiswa").innerHTML = `<img src="${resized}" class="w-full h-full object-cover">`;
+          });
         };
         reader.readAsDataURL(file);
       }
@@ -2593,8 +2792,10 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          document.getElementById("guruFotoData").value = event.target.result;
-          document.getElementById("previewFotoGuru").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
+          bukaModalResizeGambar(event.target.result, (resized) => {
+            document.getElementById("guruFotoData").value = resized;
+            document.getElementById("previewFotoGuru").innerHTML = `<img src="${resized}" class="w-full h-full object-cover">`;
+          });
         };
         reader.readAsDataURL(file);
       }
@@ -2838,12 +3039,11 @@
       } else {
         tbody.innerHTML = filtered.map(b => `
           <tr class="hover:bg-teal-50/40 transition">
-            <td class="py-3 px-4">
-              <div class="w-16">
-                ${generateSquareBarcodeSVG(b.barcode, 60)}
-                <span class="font-mono text-[9px] text-hijau-800 font-bold block text-center mt-0.5">${b.barcode}</span>
-              </div>
-            </td>
+          <td class="py-3 px-4">
+            <div class="w-16">
+              ${generateSquareBarcodeSVG(b.barcode, 60)}
+            </div>
+          </td>
             <td class="py-3 px-4 font-bold text-slate-900">
               <div>${b.judul}</div>
               ${b.fileEbook ? `<span class="inline-flex items-center gap-1 text-[10px] text-teal-700 font-medium mt-0.5"><i class="fa-solid fa-file-pdf text-red-600"></i> ${b.fileEbook}</span>` : ''}
@@ -2885,6 +3085,89 @@
 
     // PENGUNDUHAN BERKAS MODUL AJAR (DOKUMEN LENGKAP KURIKULUM MERDEKA 2026/2027)
         // ================= REAL-TIME CLOCK WITH HOURS, MINUTES, SECONDS =================
+    
+    function downloadBukuEbook(bukuId) {
+      const b = DB.buku.find(item => item.id === bukuId);
+      if (!b) return;
+
+      showToast(`Mengunduh E-Book: ${b.judul}...`);
+
+      // Generate a downloadable text/doc format of the book
+      const content = `=======================================================
+PERPUSTAKAAN DIGITAL SMK DARUL HIJRAH PANCENG
+=======================================================
+Judul Buku   : ${b.judul}
+Barcode      : ${b.barcode}
+Kategori     : ${b.kategori}
+Pengarang    : ${b.pengarang}
+Penerbit     : ${b.penerbit}
+Tahun Akses  : 2026/2027
+Status       : E-Book Resmi Terverifikasi Perpustakaan SIMS
+=======================================================
+
+RINGKASAN & MATERI BUKU:
+Buku ini memuat panduan pembelajaran, referensi kurikulum kejuruan, serta literatur pendukung santri SMK Darul Hijrah Panceng Gresik.
+
+Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bagi santri dan tenaga pendidik SMK Darul Hijrah.
+`;
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `EBook_${b.barcode}_${b.judul.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    
+    function editLogPustaka(pId) {
+      const p = DB.peminjaman.find(item => item.id === pId);
+      if (!p) return;
+      const newStatus = prompt("Ubah status transaksi pustaka (DIPINJAM / KEMBALI):", p.status);
+      if (newStatus && (newStatus.toUpperCase() === "DIPINJAM" || newStatus.toUpperCase() === "KEMBALI")) {
+        p.status = newStatus.toUpperCase();
+        persistDatabase();
+        renderRiwayatPerpusTable();
+        renderPeminjamanTable();
+        showToast("Status log peminjaman berhasil diperbarui.");
+      }
+    }
+
+    function deleteLogPustaka(pId) {
+      if (confirm("Apakah Anda yakin ingin menghapus data log perpustakaan ini?")) {
+        DB.peminjaman = DB.peminjaman.filter(item => item.id !== pId);
+        persistDatabase();
+        renderRiwayatPerpusTable();
+        renderPeminjamanTable();
+        showToast("Log riwayat pustaka berhasil dihapus.");
+      }
+    }
+
+    
+    function hapusLogPresensi(absId) {
+      if (confirm("Hapus baris data presensi ini?")) {
+        DB.absensi = DB.absensi.filter(a => a.id !== absId);
+        persistDatabase();
+        updateDashboardMetrics();
+        renderRiwayatTable();
+        showToast("Data presensi berhasil dihapus.");
+      }
+    }
+
+    function kosongkanPresensiHariIni() {
+      if (confirm("Apakah Anda yakin ingin menghapus/mengosongkan seluruh riwayat presensi hari ini?")) {
+        const today = new Date().toISOString().split('T')[0];
+        DB.absensi = DB.absensi.filter(a => a.tanggal !== today);
+        persistDatabase();
+        updateDashboardMetrics();
+        renderRiwayatTable();
+        showToast("Seluruh riwayat presensi hari ini telah dibersihkan.");
+      }
+    }
+
     function startRealtimeClock() {
       function updateClock() {
         const now = new Date();
@@ -3373,7 +3656,7 @@
           { no: 4, nama: "Ushul Fiqh", kkm: 75, nilai: data.mapelTarikh },
           { no: 5, nama: "Manajemen Lembaga", kkm: 75, nilai: data.mapelQuran },
           { no: 6, nama: "tafsir", kkm: 75, nilai: data.mapelTilawati },
-          { no: 7, nama: "Kompetensi Kejuruan Terpadu", kkm: 75, nilai: data.mapelKejuruan }
+          { no: 7, nama: "Hadits", kkm: 75, nilai: data.mapelHadits }
         ];
 
         let totalNilai = 0;
@@ -3406,10 +3689,32 @@
     }
 
     function unduhLaporanPDF() {
-      showToast("Mempersiapkan dokumen PDF resmi...");
-      setTimeout(() => {
+      const element = document.getElementById("printableArea");
+      if (!element) {
+        showToast("Area laporan tidak ditemukan!", "error");
+        return;
+      }
+
+      showToast("Mengkonversi laporan ke berkas PDF...", "info");
+
+      if (typeof html2pdf !== "undefined") {
+        const opt = {
+          margin: [8, 8, 8, 8],
+          filename: `Laporan_Presensi_SMK_Darul_Hijrah_${new Date().toISOString().split('T')[0]}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+          showToast("Laporan PDF resmi berhasil diunduh!");
+        }).catch(err => {
+          console.error("Gagal html2pdf:", err);
+          window.print();
+        });
+      } else {
         window.print();
-      }, 400);
+      }
     }
 
     // RENDERING KARTU SANTRI DENGAN BARCODE SEGI EMPAT + UNDUH PNG/JPG
@@ -3454,18 +3759,17 @@
               </div>
             </div>
 
-            <!-- Barcode Segi Empat & Action Unduh -->
+            <!-- Barcode Segi Empat & Action Unduh (Tanpa Teks di Bawah Barcode/QR) -->
             <div class="pt-3 border-t border-hijau-900 flex flex-col gap-2">
               <div class="flex items-center gap-3 bg-white p-2.5 rounded-xl shadow-inner text-slate-900">
-                <div class="w-24 shrink-0">
+                <div class="w-24 shrink-0 flex items-center justify-center">
                   ${generateSquareBarcodeSVG(s.qrToken, 120)}
                 </div>
                 <div class="flex-1 space-y-1 text-left">
-                  <div class="font-mono text-[10px] font-bold text-hijau-950">${s.qrToken}</div>
-                  <div class="text-[9px] text-slate-500 leading-tight">Mendukung Scan Presensi & Peminjaman Perpustakaan</div>
+                  <div class="text-[10px] text-slate-600 font-semibold leading-tight">Barcode Resmi Presensi & Sirkulasi</div>
                   <div class="flex items-center gap-1.5 pt-1">
                     <button onclick="downloadBarcodeImage('${s.qrToken}', '${s.nama}', 'png')" class="px-2 py-1 bg-hijau-800 hover:bg-hijau-900 text-white rounded text-[9px] font-bold flex items-center gap-1 shadow">
-                      <i class="fa-solid fa-download"></i> PNG
+                      <i class="fa-solid fa-download"></i> Unduh PNG
                     </button>
                     <button onclick="downloadBarcodeImage('${s.qrToken}', '${s.nama}', 'jpg')" class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-hijau-950 rounded text-[9px] font-bold flex items-center gap-1 shadow">
                       <i class="fa-solid fa-download"></i> JPG
@@ -3666,6 +3970,16 @@
               </span>
             </td>
             <td class="py-3 px-4 text-slate-500">Tata Usaha</td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <button onclick="editLogPustaka('${p.id}')" class="p-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition" title="Edit Transaksi">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteLogPustaka('${p.id}')" class="p-1.5 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition" title="Hapus Riwayat">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
           </tr>
         `;
       }).join("");
@@ -3866,6 +4180,11 @@
               <td class="py-2.5 px-3 text-slate-600">${kelas ? kelas.nama : "-"}</td>
               <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-mono">${abs.metode}</span></td>
               <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeStyle}">${abs.status}</span></td>
+              <td class="py-2.5 px-3 text-center">
+                <button onclick="hapusLogPresensi('${abs.id}')" class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition" title="Hapus Data Ini">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </td>
             </tr>
           `;
         });
@@ -3888,7 +4207,12 @@
       });
     }
 
-    // SCANNER CORE
+    // SCANNER CORE (FAST RESPONSE AUTO-SCAN WITH JSQR)
+    let scanAnimationId = null;
+    let scanCanvas = null;
+    let lastScannedToken = "";
+    let lastScanTime = 0;
+
     async function startCamera() {
       const video = document.getElementById("videoElement");
       const overlay = document.getElementById("scannerOverlay");
@@ -3900,11 +4224,14 @@
       try {
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-blue-50 text-blue-800 border border-blue-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengaktifkan sensor kamera...';
+        statusMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengaktifkan sensor kamera fast response...';
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
         cameraStream = stream;
         video.srcObject = stream;
+        video.setAttribute("playsinline", true);
         video.classList.remove("hidden");
         overlay.classList.remove("hidden");
         idleState.classList.add("hidden");
@@ -3912,15 +4239,67 @@
         btnStop.classList.remove("hidden");
 
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-teal-50 text-hijau-800 border border-teal-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif. Arahkan barcode santri atau buku ke area reticle.';
+        statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif (Fast-Scan Aktif). Arahkan barcode santri/buku ke dalam kotak pemindai.';
+
+        if (!scanCanvas) {
+          scanCanvas = document.createElement("canvas");
+        }
+
+        video.play();
+        requestAnimationFrame(tickFastScanner);
       } catch (err) {
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-circle-info"></i> Kamera tidak terdeteksi. Gunakan input manual di bawah.';
+        statusMsg.innerHTML = '<i class="fa-solid fa-circle-info"></i> Kamera tidak terdeteksi atau izin ditolak. Silakan gunakan input manual.';
+      }
+    }
+
+    function tickFastScanner() {
+      const video = document.getElementById("videoElement");
+      if (video && video.readyState === video.HAVE_ENOUGH_DATA && cameraStream) {
+        scanCanvas.height = video.videoHeight;
+        scanCanvas.width = video.videoWidth;
+        const ctx = scanCanvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
+        const imageData = ctx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+
+        if (typeof jsQR !== "undefined") {
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert"
+          });
+
+          if (code && code.data) {
+            const token = code.data.trim();
+            const now = Date.now();
+            if (token !== lastScannedToken || (now - lastScanTime) > 2500) {
+              lastScannedToken = token;
+              lastScanTime = now;
+              try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                osc.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.12);
+              } catch (e) {}
+
+              verifyScan(token);
+            }
+          }
+        }
+      }
+
+      if (cameraStream) {
+        scanAnimationId = requestAnimationFrame(tickFastScanner);
       }
     }
 
     function stopCamera() {
+      if (scanAnimationId) {
+        cancelAnimationFrame(scanAnimationId);
+        scanAnimationId = null;
+      }
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
         cameraStream = null;
@@ -3985,9 +4364,8 @@
               <div class="text-[10px] text-slate-500">${s.telpOrtu}</div>
             </td>
             <td class="py-3 px-4">
-              <div class="w-20">
-                ${generateSquareBarcodeSVG(s.qrToken, 70)}
-                <span class="font-mono text-[9px] text-slate-500 block text-center mt-0.5">${s.nis}</span>
+              <div class="w-16">
+                ${generateSquareBarcodeSVG(s.qrToken, 65)}
               </div>
             </td>
             <td class="py-3 px-4">
@@ -4102,12 +4480,16 @@
           <td class="py-3 px-4">
             <div class="w-16">
               ${generateSquareBarcodeSVG(b.barcode, 60)}
-              <span class="font-mono text-[9px] text-hijau-800 font-bold block text-center mt-0.5">${b.barcode}</span>
             </div>
           </td>
           <td class="py-3 px-4 font-bold text-slate-900">
             <div>${b.judul}</div>
-            ${b.fileEbook ? `<span class="inline-flex items-center gap-1 text-[10px] text-teal-700 font-medium mt-0.5"><i class="fa-solid fa-file-pdf text-red-600"></i> ${b.fileEbook}</span>` : ''}
+            <div class="mt-1 flex items-center gap-2">
+              <button onclick="downloadBukuEbook('${b.id}')" class="px-2 py-0.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 rounded text-[10px] font-semibold flex items-center gap-1 shadow-sm transition">
+                <i class="fa-solid fa-file-arrow-down text-red-600"></i> Unduh E-Book (PDF)
+              </button>
+              ${b.fileEbook ? `<span class="text-[9px] text-slate-400 font-normal">(${b.fileEbook})</span>` : ''}
+            </div>
           </td>
           <td class="py-3 px-4 text-slate-600">${b.pengarang} - ${b.penerbit}</td>
           <td class="py-3 px-4"><span class="bg-teal-50 text-hijau-800 border border-teal-200 px-2 py-0.5 rounded text-[10px] font-bold">${b.kategori}</span></td>
@@ -4268,6 +4650,11 @@
             <td class="py-3 px-4"><span class="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold border ${badgeStyle}">${abs.status}</span></td>
             <td class="py-3 px-4 text-slate-600 max-w-xs truncate">${abs.keterangan || "-"}</td>
             <td class="py-3 px-4 text-slate-500">${abs.petugas || "Tata Usaha"}</td>
+            <td class="py-3 px-4 text-center">
+              <button onclick="hapusLogPresensi('${abs.id}')" class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition" title="Hapus Riwayat">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
           </tr>
         `;
       });
