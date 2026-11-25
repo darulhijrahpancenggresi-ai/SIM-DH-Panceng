@@ -544,7 +544,7 @@
                   <span class="flex items-center gap-1 text-hijau-800 font-bold">
                     <i class="fa-solid fa-shield-halved"></i> Validasi Real-time Aktif
                   </span>
-                  <span>Operator: Tata Usaha</span>
+                  <span>Kepala Tata Usaha</span>
                 </div>
               </div>
             </div>
@@ -2419,10 +2419,7 @@
   <script>
     // KEY PENYIMPANAN LOCALSTORAGE
     const STORAGE_KEY = "SIMS_DARUL_HIJRAH_PANCENG_DATA_V7_FINAL";
-    // Otomatis bersihkan cache lokal lama agar perubahan langsung aktif seketika
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch(e) {}
+    // Cache lokal dikelola dengan persisten
 
     // DATA AWAL SMK DARUL HIJRAH PANCENG
     const INITIAL_DEFAULT_DATA = {
@@ -2432,7 +2429,7 @@
         alamat: "Jl. Raya Panceng No. 45, Panceng, Gresik, Jawa Timur 61156",
         email: "info@smkdarulhijrah.sch.id",
         telepon: "(031) 3948821",
-        kepalaSekolah: "Drs. H. M. Zainul Arifin, M.Pd.I",
+        kepalaSekolah: "Ismail Hasan,S.Sos",
         nipKepalaSekolah: "19740512 200212 1 004",
         tahunAjaran: "2026/2027",
         semester: "Ganjil",
@@ -2528,7 +2525,15 @@
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
-          return { ...INITIAL_DEFAULT_DATA, ...JSON.parse(stored) };
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === "object") {
+            const base = JSON.parse(JSON.stringify(INITIAL_DEFAULT_DATA));
+            // Terapkan seluruh data tersimpan (termasuk jika siswa: [] kosong karena dihapus)
+            Object.keys(parsed).forEach(k => {
+              base[k] = parsed[k];
+            });
+            return base;
+          }
         } catch (e) {
           console.error("Gagal load database:", e);
         }
@@ -2670,60 +2675,28 @@
 
     // UPLOAD FOTO PROFIL HANDLERS (BASE64 ENCODING)
     function handleUploadFotoTU(e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          DB.operatorTU.foto = event.target.result;
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const applyFotoTU = (imgData) => {
+          if (!DB.KepalaTU) DB.KepalaTU = {};
+          if (!DB.operatorTU) DB.operatorTU = {};
+          DB.KepalaTU.foto = imgData;
+          DB.operatorTU.foto = imgData;
           persistDatabase();
-                renderAvatarTU();
-      renderUploadedAssets();
-
-      // Form Simpan Nilai Raport Santri (Format 1 & 2)
-      const formRaport = document.getElementById("formSaveRaportData");
-      if (formRaport) {
-        formRaport.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const santriId = document.getElementById("inputRaportSiswaSelect").value;
-          if (!santriId) return;
-
-          const getVal = (id, def = "") => {
-            const el = document.getElementById(id);
-            return el ? el.value.trim() : def;
-          };
-          const getNum = (id, def = 0) => {
-            const el = document.getElementById(id);
-            return el ? (parseInt(el.value) || def) : def;
-          };
-
-          if (!DB.raportCustom) DB.raportCustom = {};
-          DB.raportCustom[santriId] = {
-            tahsinJilid: getVal("inpTahsinJilid", "IV"),
-            tahsinHal: getVal("inpTahsinHal", "1 - 40"),
-            tahsinNilai: getNum("inpTahsinNilai", 92),
-            tahfidzNilai: getNum("inpTahfidzNilai", 91),
-            pengajarAlquran: getVal("inpPengajarAlquran", "M. Ridwan, M.Pd.I"),
-            adabAkhlak: getVal("inpAdabAkhlak", ""),
-            mapelBarab: getNum("inpMapelBarab", 90),
-            mapelAkhlaq: getNum("inpMapelAkhlaq", 92),
-            mapelFiqih: getNum("inpMapelFiqih", 90),
-            mapelTarikh: getNum("inpMapelTarikh", 88),
-            mapelQuran: getNum("inpMapelQuran", 95),
-            mapelTilawati: getNum("inpMapelTilawati", 90),
-            mapelKejuruan: getNum("inpMapelKejuruan", 92),
-            catatanWali: getVal("inpCatatanWali", "")
-          };
-
-          persistDatabase();
-          closeModalInputRaport();
-          renderLembarRaport();
-          showToast("Data nilai raport santri berhasil disimpan!");
-        });
-      }
-          showToast("Foto profil Operator Tata Usaha diperbarui!");
+          renderAvatarTU();
+          showToast("Foto profil Tata Usaha berhasil terupdate!");
         };
-        reader.readAsDataURL(file);
-      }
+
+        if (typeof bukaModalResizeGambar === "function") {
+          bukaModalResizeGambar(event.target.result, applyFotoTU);
+        } else {
+          applyFotoTU(event.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
     }
 
     
@@ -2851,22 +2824,32 @@
     function konfirmasiSimpanGambar() {
       const canvas = document.getElementById("resizeCanvas");
       if (!canvas) return;
+      // Ambil hasil pemotongan/penyesuaian gambar
       const resultBase64 = canvas.toDataURL("image/jpeg", 0.92);
       if (typeof currentImageCallback === "function") {
         currentImageCallback(resultBase64);
       }
       const m = document.getElementById("modalResizeGambar");
       if (m) m.classList.add("hidden");
-      showToast("Foto terbaru telah dikonfirmasi.");
+      showToast("Foto profil terbaru berhasil dikonfirmasi dan diterapkan.");
     }
     
     function renderAvatarTU() {
       const av = document.getElementById("avatarTU");
-      if (DB.operatorTU && DB.operatorTU.foto) {
-        av.innerHTML = `<img src="${DB.operatorTU.foto}" class="w-full h-full object-cover">`;
-      } else {
-        av.innerHTML = "TU";
-      }
+      if (!av) return;
+      const fotoAktif = (DB.KepalaTU && DB.KepalaTU.foto) || (DB.operatorTU && DB.operatorTU.foto) || "3x4 Foto CPNS Rahman.jpg";
+      const img = new Image();
+      img.onload = () => {
+        av.innerHTML = `<img src="${fotoAktif}" class="w-full h-full object-cover">`;
+      };
+      img.onerror = () => {
+        if (fotoAktif !== "3x4 Foto CPNS Rahman.jpg") {
+          av.innerHTML = `<img src="${fotoAktif}" class="w-full h-full object-cover">`;
+        } else {
+          av.innerHTML = "TU";
+        }
+      };
+      img.src = fotoAktif;
     }
 
     function previewUploadFotoSiswa(e) {
