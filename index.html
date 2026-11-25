@@ -68,10 +68,14 @@
 
   window.firebaseSync = {
     db: firestoreDb,
+    lastLocalWriteTs: 0,
     save: async function(data) {
       if (isApplyingRemoteSync) return;
       try {
-        await setDoc(doc(firestoreDb, "sims_data", "main_database"), JSON.parse(JSON.stringify(data)));
+        const payload = JSON.parse(JSON.stringify(data));
+        payload._lastModified = Date.now();
+        this.lastLocalWriteTs = payload._lastModified;
+        await setDoc(doc(firestoreDb, "sims_data", "main_database"), payload);
       } catch (err) {
         console.warn("Firebase sync error:", err);
       }
@@ -83,13 +87,20 @@
       if (docSnap.exists()) {
         const cloudData = docSnap.data();
         if (cloudData && typeof cloudData === "object") {
+          const remoteTs = cloudData._lastModified || 0;
+          if (remoteTs && window.firebaseSync.lastLocalWriteTs && (remoteTs - window.firebaseSync.lastLocalWriteTs) < 300) {
+            return;
+          }
           isApplyingRemoteSync = true;
-          window.DB = Object.assign({}, window.DB || {}, cloudData);
           if (typeof DB !== "undefined") {
+            for (const key of Object.keys(DB)) {
+              if (!key.startsWith("_")) delete DB[key];
+            }
             Object.assign(DB, cloudData);
           }
+          window.DB = DB;
           if (typeof STORAGE_KEY !== "undefined") {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
           }
           if (typeof refreshActiveViews === "function") {
             refreshActiveViews();
@@ -213,20 +224,23 @@
       </div>
 
       <!-- Profil Kepala Tata Usaha (Tata Usaha) dengan Unggah Foto -->
-      <div class="px-4 py-3 bg-hijau-900/30 border-b border-hijau-900/40 flex items-center gap-3">
-        <div class="relative group cursor-pointer" onclick="document.getElementById('inputUploadFotoTU').click()">
-          <div id="avatarTU" class="w-10 h-10 rounded-full bg-hijau-800 flex items-center justify-center font-bold text-amber-300 ring-2 ring-amber-400/40 text-xs overflow-hidden">
-            TU
-          </div>
-          <span class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white text-[9px] opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-camera"></i></span>
-          <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-teal-400 border border-hijau-950"></span>
-        </div>
-        <input type="file" id="inputUploadFotoTU" accept="image/*" class="hidden" onchange="handleUploadFotoTU(event)">
-        <div class="overflow-hidden">
-          <p class="text-xs font-bold text-white truncate" id="namaKepalaTU">Abdul Rahman, S.Pd.</p>
-          <p class="text-[10px] text-amber-300 font-semibold uppercase">Kepala Tata Usaha</p>
-        </div>
-      </div>
+     <div class="px-4 py-3 bg-hijau-900/30 border-b border-hijau-900/40 flex items-center gap-3">
+  <div class="relative group cursor-pointer" onclick="document.getElementById('inputUploadFotoTU').click()">
+    <!-- Wadah diubah ke rasio 3x4 (w-9 h-12) dengan rounded-lg -->
+    <div id="avatarTU" class="w-9 h-12 rounded-lg bg-hijau-800 flex items-center justify-center font-bold text-amber-300 ring-2 ring-amber-400/40 text-xs overflow-hidden shadow-inner">
+      <img src=" 3x4 Foto CPNS Rahman.jpg" alt="Foto Abdul Rahman" class="w-full h-full object-cover">
+    </div>
+    <span class="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center text-white text-[9px] opacity-0 group-hover:opacity-100 transition">
+      <i class="fa-solid fa-camera"></i>
+    </span>
+    <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-teal-400 border border-hijau-950"></span>
+  </div>
+  <input type="file" id="inputUploadFotoTU" accept="image/*" class="hidden" onchange="handleUploadFotoTU(event)">
+  <div class="overflow-hidden">
+    <p class="text-xs font-bold text-white truncate" id="namaKepalaTU">Abdul Rahman, S.Pd.</p>
+    <p class="text-[10px] text-amber-300 font-semibold uppercase">Kepala Tata Usaha</p>
+  </div>
+</div>
 
       <!-- Navigation Menu Links -->
       <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-1" id="navMenuList">
@@ -618,7 +632,6 @@
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Laporan Penilaian & Buku Raport Santri</h2>
               <p class="text-xs text-slate-500">
-                Pilihan format cetak resmi: Format Pembelajaran Al-Qur'an (Tahsin & Tahfidz) atau Format Akhir Semester (Diniyah & Kejuruan).
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -1027,7 +1040,7 @@
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Pengelolaan Sarana & Prasarana (Sarpras)</h2>
               <p class="text-xs text-slate-500">
-                Inventarisasi aset SMK Darul Hijrah Panceng (Nama Barang, Kode Barang, Unit, dan Kondisi).
+                Inventarisasi aset SMK Darul Hijrah Panceng.
               </p>
             </div>
             <button onclick="openModalSarpras()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
@@ -1176,14 +1189,13 @@
 
         <!-- 9. PUSAT LAPORAN RESMI & UNDUH PDF -->
         <section id="viewLaporan" class="hidden space-y-6">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="shrink-0">
               <h2 class="text-xl font-bold text-hijau-950">Pusat Laporan & Rekapitulasi</h2>
               <p class="text-xs text-slate-500">
-                Cetak langsung atau simpan.
               </p>
             </div>
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2.5 justify-start lg:justify-end">
               <select id="filterKelasLaporan" onchange="onKelasLaporanChange()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
                 <option value="ALL">Semua Kelas</option>
               </select>
@@ -1789,7 +1801,7 @@
             </select>
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Kelas / Rombel</label>
+            <label class="block font-bold text-slate-700 mb-1">Kelas</label>
             <select id="siswaKelas" class="w-full px-3 py-2 border rounded-lg focus:outline-none"></select>
           </div>
           <div>
@@ -2317,7 +2329,7 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Nama Rombel *</label>
+          <label class="block font-bold text-slate-700 mb-1">Nama  Kelas *</label>
           <input type="text" id="kelasNama" required placeholder="" class="w-full px-3 py-2 border rounded-lg focus:outline-none">
         </div>
 
@@ -3207,9 +3219,12 @@
           DB.settings[fieldKey] = event.target.result;
           persistDatabase();
           renderUploadedAssets();
-          showToast(`Berkas ${fieldKey} berhasil diunggah!`);
+          if (typeof renderLembarRaport === "function") renderLembarRaport();
+          if (typeof renderOfficialReport === "function") renderOfficialReport();
+          showToast(`Berkas ${fieldKey} langsung terupdate!`);
         };
         reader.readAsDataURL(file);
+        e.target.value = "";
       }
     }
 
@@ -4067,7 +4082,7 @@
       { id: "riwayat", label: "Riwayat & Log Pustaka", icon: "fa-solid fa-clock-rotate-left" },
       { id: "laporan", label: "Pusat Laporan", icon: "fa-solid fa-file-invoice" },
       { id: "guru", label: "Tenaga Pendidik & Tenaga Kependidikan", icon: "fa-solid fa-user-tie" },
-      { id: "kelas", label: "Kelas & Rombel", icon: "fa-solid fa-layer-group" },
+      { id: "kelas", label: "Kelas", icon: "fa-solid fa-layer-group" },
       { id: "jurusan", label: "Kompetensi Keahlian", icon: "fa-solid fa-network-wired" },
       { id: "mapel", label: "Mata Pelajaran", icon: "fa-solid fa-book-open" },
       { id: "jadwal", label: "Jadwal Pelajaran", icon: "fa-solid fa-calendar-days" },
@@ -4087,8 +4102,9 @@
           navigateTo(item.id);
           document.getElementById("sidebar").classList.add("-translate-x-full");
         };
-        btn.className = `w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition text-teal-100/80 hover:bg-hijau-900/60 hover:text-white`;
-        btn.innerHTML = `<i class="${item.icon} w-5 text-teal-300"></i><span>${item.label}</span>`;
+        const labelClass = item.id === "guru" ? "flex-1 text-justify leading-snug" : "flex-1 text-left leading-snug";
+        btn.className = `w-full flex items-start gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition text-teal-100/80 hover:bg-hijau-900/60 hover:text-white`;
+        btn.innerHTML = `<i class="${item.icon} w-5 mt-0.5 text-teal-300 shrink-0"></i><span class="${labelClass}">${item.label}</span>`;
         container.appendChild(btn);
       });
     }
@@ -4206,6 +4222,55 @@
     }
 
     // SCANNER CORE
+    
+    let fastScanTimer = null;
+    let lastScannedCode = "";
+    let lastScannedTime = 0;
+    const scanCanvas = document.createElement("canvas");
+    const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
+    const nativeBarcodeDetector = ("BarcodeDetector" in window) ? new window.BarcodeDetector({ formats: ["qr_code", "code_128", "ean_13", "code_39"] }) : null;
+
+    function startFastScanLoop(videoEl) {
+      if (fastScanTimer) clearInterval(fastScanTimer);
+      fastScanTimer = setInterval(async () => {
+        if (!cameraStream || !videoEl || videoEl.readyState < 2) return;
+        const now = Date.now();
+        try {
+          if (nativeBarcodeDetector) {
+            const barcodes = await nativeBarcodeDetector.detect(videoEl);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              const code = String(barcodes[0].rawValue).trim();
+              if (code && (code !== lastScannedCode || (now - lastScannedTime) > 1200)) {
+                lastScannedCode = code;
+                lastScannedTime = now;
+                verifyScan(code);
+                return;
+              }
+            }
+          }
+          if (typeof jsQR !== "undefined") {
+            const w = Math.min(videoEl.videoWidth || 640, 640);
+            const h = Math.min(videoEl.videoHeight || 480, 480);
+            if (w > 0 && h > 0) {
+              scanCanvas.width = w;
+              scanCanvas.height = h;
+              scanCtx.drawImage(videoEl, 0, 0, w, h);
+              const imgData = scanCtx.getImageData(0, 0, w, h);
+              const qrResult = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+              if (qrResult && qrResult.data) {
+                const code = String(qrResult.data).trim();
+                if (code && (code !== lastScannedCode || (now - lastScannedTime) > 1200)) {
+                  lastScannedCode = code;
+                  lastScannedTime = now;
+                  verifyScan(code);
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }, 150);
+    }
+
     async function startCamera() {
       const video = document.getElementById("videoElement");
       const overlay = document.getElementById("scannerOverlay");
@@ -4229,7 +4294,8 @@
         btnStop.classList.remove("hidden");
 
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-teal-50 text-hijau-800 border border-teal-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif. Arahkan barcode santri atau buku ke area reticle.';
+        statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif (Fast Scan). Arahkan QR/Barcode santri atau buku ke area pemindai.';
+        startFastScanLoop(video);
       } catch (err) {
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200";
@@ -4238,6 +4304,10 @@
     }
 
     function stopCamera() {
+      if (fastScanTimer) {
+        clearInterval(fastScanTimer);
+        fastScanTimer = null;
+      }
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
         cameraStream = null;
@@ -4687,7 +4757,7 @@
     function renderOfficialReport() {
       const selKelasLap = document.getElementById("filterKelasLaporan");
       if (selKelasLap && selKelasLap.options.length <= 1) {
-        selKelasLap.innerHTML = '<option value="ALL">Semua Kelas / Rombel</option>' + 
+        selKelasLap.innerHTML = '<option value="ALL">Semua Kelas </option>' + 
           DB.kelas.map(k => `<option value="${k.id}">${k.nama}</option>`).join("");
       }
 
@@ -5050,7 +5120,7 @@
       document.getElementById("kelasJurusanSelect").innerHTML = DB.jurusan.map(j => `<option value="${j.id}">${j.singkatan} - ${j.nama}</option>`).join("");
 
       if (id) {
-        title.innerText = "Edit Rombel";
+        title.innerText = "Edit Kelas";
         const k = DB.kelas.find(item => item.id === id);
         document.getElementById("kelasEditId").value = k.id;
         document.getElementById("kelasTingkat").value = k.tingkat;
@@ -5058,7 +5128,7 @@
         document.getElementById("kelasNama").value = k.nama;
         document.getElementById("kelasWali").value = k.waliKelas;
       } else {
-        title.innerText = "Tambah Rombel Baru";
+        title.innerText = "Tambah Kelas Baru";
         form.reset();
         document.getElementById("kelasEditId").value = "";
       }
@@ -5078,7 +5148,7 @@
         DB.kelas = DB.kelas.filter(k => k.id !== id);
         persistDatabase();
         renderKelasGrid();
-        showToast("Rombel berhasil dihapus.");
+        showToast("Kelas berhasil dihapus.");
       }
     }
 
@@ -5181,7 +5251,7 @@
       // Filter kelas dropdown
       const filterKelas = document.getElementById("filterKelasSiswa");
       if (filterKelas) {
-        filterKelas.innerHTML = '<option value="ALL">Semua Rombel / Kelas</option>';
+        filterKelas.innerHTML = '<option value="ALL">Semua Kelas</option>';
         DB.kelas.forEach(k => {
           filterKelas.innerHTML += `<option value="${k.id}">${k.nama}</option>`;
         });
