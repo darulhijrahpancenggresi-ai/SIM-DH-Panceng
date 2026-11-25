@@ -68,13 +68,13 @@
 
   window.firebaseSync = {
     db: firestoreDb,
-    lastLocalWriteTs: 0,
     save: async function(data) {
       if (isApplyingRemoteSync) return;
       try {
         const payload = JSON.parse(JSON.stringify(data));
         payload._lastModified = Date.now();
-        this.lastLocalWriteTs = payload._lastModified;
+        payload._isInitializedByUser = true;
+        localStorage.setItem("SIMS_DARUL_HIJRAH_PANCENG_DATA_V7_FINAL", JSON.stringify(payload));
         await setDoc(doc(firestoreDb, "sims_data", "main_database"), payload);
       } catch (err) {
         console.warn("Firebase sync error:", err);
@@ -87,25 +87,34 @@
       if (docSnap.exists()) {
         const cloudData = docSnap.data();
         if (cloudData && typeof cloudData === "object") {
+          const localStored = localStorage.getItem("SIMS_DARUL_HIJRAH_PANCENG_DATA_V7_FINAL");
+          const localParsed = localStored ? JSON.parse(localStored) : null;
+          const localTs = (localParsed && localParsed._lastModified) || 0;
           const remoteTs = cloudData._lastModified || 0;
-          if (remoteTs && window.firebaseSync.lastLocalWriteTs && (remoteTs - window.firebaseSync.lastLocalWriteTs) < 300) {
+
+          // Jika data di browser lokal lebih baru daripada cloud, upload lokal ke cloud!
+          if (localTs > remoteTs) {
+            window.firebaseSync.save(localParsed || window.DB);
             return;
           }
+
           isApplyingRemoteSync = true;
           if (typeof DB !== "undefined") {
-            for (const key of Object.keys(DB)) {
-              if (!key.startsWith("_")) delete DB[key];
-            }
+            // Bersihkan properti lama dan terapkan cloudData (termasuk jika array santri kosong [])
+            Object.keys(DB).forEach(k => { if (!k.startsWith("_")) delete DB[k]; });
             Object.assign(DB, cloudData);
           }
           window.DB = DB;
-          if (typeof STORAGE_KEY !== "undefined") {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-          }
+          localStorage.setItem("SIMS_DARUL_HIJRAH_PANCENG_DATA_V7_FINAL", JSON.stringify(cloudData));
           if (typeof refreshActiveViews === "function") {
             refreshActiveViews();
           }
           setTimeout(() => { isApplyingRemoteSync = false; }, 200);
+        }
+      } else {
+        // Jika dokumen cloud belum ada, upload data lokal yang ada saat ini
+        if (typeof DB !== "undefined") {
+          window.firebaseSync.save(DB);
         }
       }
     }, (error) => {
@@ -580,6 +589,9 @@
 
               <button onclick="exportSiswaCSV()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg font-bold flex items-center gap-1.5 transition">
                 <i class="fa-solid fa-file-csv"></i> Ekspor CSV
+              </button>
+              <button onclick="kosongkanSemuaSantri()" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs rounded-lg font-bold flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-trash-can"></i> Hapus Semua Santri
               </button>
             </div>
           </div>
@@ -2528,22 +2540,33 @@
           const parsed = JSON.parse(stored);
           if (parsed && typeof parsed === "object") {
             const base = JSON.parse(JSON.stringify(INITIAL_DEFAULT_DATA));
-            // Terapkan seluruh data tersimpan (termasuk jika siswa: [] kosong karena dihapus)
+            // Terapkan data yang disimpan di browser secara utuh
             Object.keys(parsed).forEach(k => {
               base[k] = parsed[k];
             });
+            // Jika user pernah menghapus atau mengubah data, pertahankan data user secara mutlak
+            if (parsed.siswa !== undefined) {
+              base.siswa = parsed.siswa;
+            }
+            if (parsed.absensi !== undefined) {
+              base.absensi = parsed.absensi;
+            }
             return base;
           }
         } catch (e) {
           console.error("Gagal load database:", e);
         }
       }
-      return JSON.parse(JSON.stringify(INITIAL_DEFAULT_DATA));
+      const initial = JSON.parse(JSON.stringify(INITIAL_DEFAULT_DATA));
+      initial._lastModified = Date.now();
+      return initial;
     }
 
     let DB = loadDatabase();
 
     function persistDatabase() {
+      DB._lastModified = Date.now();
+      DB._isInitializedByUser = true;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
       if (window.firebaseSync && typeof window.firebaseSync.save === "function") {
         window.firebaseSync.save(DB);
@@ -4066,7 +4089,7 @@
       { id: "laporan", label: "Pusat Laporan", icon: "fa-solid fa-file-invoice" },
       { id: "guru", label: "Tenaga Pendidik & Tenaga Kependidikan", icon: "fa-solid fa-user-tie" },
       { id: "kelas", label: "Kelas", icon: "fa-solid fa-layer-group" },
-      { id: "jurusan", label: "Kompetensi Keahlian", icon: "fa-solid fa-network-wired" },
+      { id: "jurusan", label: "Kejuruan", icon: "fa-solid fa-network-wired" },
       { id: "mapel", label: "Mata Pelajaran", icon: "fa-solid fa-book-open" },
       { id: "jadwal", label: "Jadwal Pelajaran", icon: "fa-solid fa-calendar-days" },
       { id: "nilai", label: "Pengelolaan Nilai", icon: "fa-solid fa-graduation-cap" },
@@ -4422,12 +4445,31 @@
     function deleteSiswa(id) {
       const s = DB.siswa.find(item => item.id === id);
       if (!s) return;
-      if (confirm(`Hapus santri ${s.nama} (${s.nis})?`)) {
+      if (confirm(`Hapus santri ${s.nama} (${s.nis})? Data akan dihapus permanen.`)) {
         DB.siswa = DB.siswa.filter(item => item.id !== id);
+        // Hapus juga riwayat absensi santri terkait agar sinkron
+        DB.absensi = DB.absensi.filter(a => a.siswaId !== id);
         persistDatabase();
         renderSiswaTable();
+        renderKartuSiswa();
+        renderLembarRaport();
+        renderOfficialReport();
         updateDashboardMetrics();
-        showToast(`Santri ${s.nama} berhasil dihapus.`);
+        showToast(`Santri ${s.nama} telah dihapus permanen.`);
+      }
+    }
+
+    function kosongkanSemuaSantri() {
+      if (confirm("Apakah Anda yakin ingin MENGHAPUS SEMUA DATA SANTRI awal sekaligus? Data santri dan absensi akan dibersihkan secara permanen.")) {
+        DB.siswa = [];
+        DB.absensi = [];
+        persistDatabase();
+        renderSiswaTable();
+        renderKartuSiswa();
+        renderLembarRaport();
+        renderOfficialReport();
+        updateDashboardMetrics();
+        showToast("Seluruh data santri awal berhasil dihapus permanen!");
       }
     }
 
