@@ -8,11 +8,6 @@
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- jsQR for super-fast barcode & QR scanning -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <!-- html2pdf for direct PDF export without print dialog -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
   
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -54,7 +49,7 @@
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
-  import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDq-zObTuJk0aIwdKhzhurW7eZz3xozkpk",
@@ -69,29 +64,37 @@
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
   const firestoreDb = getFirestore(app);
+  let isApplyingRemoteSync = false;
 
   window.firebaseSync = {
     db: firestoreDb,
     save: async function(data) {
+      if (isApplyingRemoteSync) return;
       try {
-        await setDoc(doc(firestoreDb, "sims_data", "main_database"), data);
+        await setDoc(doc(firestoreDb, "sims_data", "main_database"), JSON.parse(JSON.stringify(data)));
       } catch (err) {
         console.warn("Firebase sync error:", err);
       }
     }
   };
 
-  // Real-time listener: data otomatis tersinkron antar-perangkat secara real-time!
   try {
     onSnapshot(doc(firestoreDb, "sims_data", "main_database"), (docSnap) => {
       if (docSnap.exists()) {
         const cloudData = docSnap.data();
         if (cloudData && typeof cloudData === "object") {
-          window.DB = { ...window.DB, ...cloudData };
-          localStorage.setItem("SIMS_DARUL_HIJRAH_PANCENG_DATA_V5", JSON.stringify(window.DB));
+          isApplyingRemoteSync = true;
+          window.DB = Object.assign({}, window.DB || {}, cloudData);
+          if (typeof DB !== "undefined") {
+            Object.assign(DB, cloudData);
+          }
+          if (typeof STORAGE_KEY !== "undefined") {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+          }
           if (typeof refreshActiveViews === "function") {
             refreshActiveViews();
           }
+          setTimeout(() => { isApplyingRemoteSync = false; }, 200);
         }
       }
     }, (error) => {
@@ -181,6 +184,10 @@
       animation: scanLine 2.2s infinite ease-in-out;
     }
   </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans antialiased flex flex-col min-h-screen">
 
@@ -205,7 +212,7 @@
         </div>
       </div>
 
-      <!-- Profil Operator Aktif (Tata Usaha) dengan Unggah Foto -->
+      <!-- Profil Kepala Tata Usaha (Tata Usaha) dengan Unggah Foto -->
       <div class="px-4 py-3 bg-hijau-900/30 border-b border-hijau-900/40 flex items-center gap-3">
         <div class="relative group cursor-pointer" onclick="document.getElementById('inputUploadFotoTU').click()">
           <div id="avatarTU" class="w-10 h-10 rounded-full bg-hijau-800 flex items-center justify-center font-bold text-amber-300 ring-2 ring-amber-400/40 text-xs overflow-hidden">
@@ -216,8 +223,8 @@
         </div>
         <input type="file" id="inputUploadFotoTU" accept="image/*" class="hidden" onchange="handleUploadFotoTU(event)">
         <div class="overflow-hidden">
-          <p class="text-xs font-bold text-white truncate" id="namaOperatorTU">Abdul Rahman, S.Pd.</p>
-          <p class="text-[10px] text-amber-300 font-semibold uppercase">Operator Tata Usaha</p>
+          <p class="text-xs font-bold text-white truncate" id="namaKepalaTU">Abdul Rahman, S.Pd.</p>
+          <p class="text-[10px] text-amber-300 font-semibold uppercase">Kepala Tata Usaha</p>
         </div>
       </div>
 
@@ -360,14 +367,9 @@
                   <span class="w-2.5 h-2.5 rounded-full bg-hijau-800 animate-ping"></span>
                   <h3 class="text-sm font-bold text-slate-900">Aktivitas Presensi Terkini Hari Ini</h3>
                 </div>
-                <div class="flex items-center gap-2">
-                  <button onclick="kosongkanPresensiHariIni()" class="text-[11px] text-red-600 hover:text-red-800 font-bold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-200 transition">
-                    <i class="fa-solid fa-trash-can"></i> Bersihkan Log
-                  </button>
-                  <button onclick="navigateTo('scan')" class="text-xs text-hijau-800 font-bold hover:underline">
-                    Scan Baru &rarr;
-                  </button>
-                </div>
+                <button onclick="navigateTo('scan')" class="text-xs text-hijau-800 font-bold hover:underline">
+                  Scan Baru &rarr;
+                </button>
               </div>
 
               <div class="overflow-x-auto">
@@ -379,7 +381,6 @@
                       <th class="py-2.5 px-3 font-semibold">Kelas</th>
                       <th class="py-2.5 px-3 font-semibold">Metode</th>
                       <th class="py-2.5 px-3 font-semibold">Status</th>
-                      <th class="py-2.5 px-3 font-semibold text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody id="dashAttendanceTbody" class="divide-y divide-slate-100">
@@ -542,7 +543,7 @@
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Data Induk Santri</h2>
               <p class="text-xs text-slate-500">
-                Pengelolaan biodata santri, rombel, pas foto, dan kode barcode unik berbasis Nomor Induk Santri (NIS).
+                Pengelolaan biodata santri, kelas, pas foto, dan kode barcode unik berbasis Nomor Induk Santri (NIS).
               </p>
             </div>
             <button onclick="openModalSiswa()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
@@ -560,7 +561,7 @@
 
             <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
               <select id="filterKelasSiswa" onchange="renderSiswaTable()" class="text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-none font-medium">
-                <option value="ALL">Semua Rombel / Kelas</option>
+                <option value="ALL">Semua Kelas</option>
               </select>
 
               <button onclick="exportSiswaCSV()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg font-bold flex items-center gap-1.5 transition">
@@ -627,6 +628,10 @@
                 <i class="fa-solid fa-pen-to-square"></i>
                 <span>Input / Edit Nilai Raport</span>
               </button>
+              <button onclick="unduhRaportPDF()" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow transition">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span>Unduh Raport PDF</span>
+              </button>
               <button onclick="window.print()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow transition">
                 <i class="fa-solid fa-print"></i>
                 <span>Cetak Lembar Raport</span>
@@ -656,9 +661,9 @@
                     <i class="fa-solid fa-mosque"></i>
                   </div>
                   <div class="flex-1 px-4">
-                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-600">YAYASAN PONDOK PESANTREN DARUL HIJRAH PANCENG</h3>
-                    <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-serif">MASJID AD DU'A / SMK DARUL HIJRAH</h2>
-                    <p class="text-[11px] text-slate-600">Sekretariat: Jln. Raya Panceng No. 45, Panceng, Gresik 61156 Telphone (031) 3948821</p>
+                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-600">YAYASAN AL-BISRI PONDOK PESANTREN HIDAYATULLAH PANCENG</h3>
+                    <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-serif">SMK DARUL HIJRAH</h2>
+                    <p class="text-[11px] text-slate-600">Sekretariat: Jl. Raya Deandles No.6, RW.02, Prupuh, Kec. Panceng, Kabupaten Gresik, Jawa Timur 61156 Telphone 0896-7314-6171</p>
                   </div>
                   <div class="w-14 h-14 flex items-center justify-center text-amber-600 text-2xl font-bold shrink-0" id="renderLogoKanan1">
                     <i class="fa-solid fa-book-open"></i>
@@ -676,11 +681,11 @@
             <!-- Identitas Santri Format 1 -->
             <div class="grid grid-cols-2 gap-x-8 gap-y-1 text-xs">
               <div class="flex items-center"><span class="w-28 text-slate-600">Nama Santri</span><span>:</span> <strong id="rap1NamaSantri" class="ml-2">-</strong></div>
-              <div class="flex items-center"><span class="w-28 text-slate-600">Pengajar</span><span>:</span> <strong id="rap1Pengajar" class="ml-2">M. Ridwan, M.Pd.I</strong></div>
+              <div class="flex items-center"><span class="w-28 text-slate-600">Pengajar</span><span>:</span> <strong id="rap1Pengajar" class="ml-2">Abdul Rahman, S.Pd.</strong></div>
               <div class="flex items-center"><span class="w-28 text-slate-600">NIS</span><span>:</span> <strong id="rap1NisSantri" class="ml-2 font-mono">-</strong></div>
               <div class="flex items-center"><span class="w-28 text-slate-600">Semester</span><span>:</span> <strong id="rap1Semester" class="ml-2">I (Ganjil)</strong></div>
               <div class="flex items-center"><span class="w-28 text-slate-600">Halaqah</span><span>:</span> <strong id="rap1Halaqah" class="ml-2">-</strong></div>
-              <div class="flex items-center"><span class="w-28 text-slate-600">Tahun Pelajaran</span><span>:</span> <strong id="rap1Tahun" class="ml-2">2026/2027</strong></div>
+              <div class="flex items-center"><span class="w-28 text-slate-600">Tahun Pelajaran</span><span>:</span> <strong id="rap1Tahun" class="ml-2">2027/2028</strong></div>
             </div>
 
             <!-- Tabel Aspek Penilaian Format 1 (Header Kuning/Oranye khas Gambar) -->
@@ -801,9 +806,9 @@
                     <i class="fa-solid fa-graduation-cap"></i>
                   </div>
                   <div class="flex-1 px-4">
-                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-700">YAYASAN PENDIDIKAN ISLAM (YPI) DARUL HIJRAH PANCENG</h3>
-                    <h2 class="text-lg sm:text-xl font-black text-emerald-900 tracking-tight">MADRASAH DINIYAH TAKMILIYAH / SMK DARUL HIJRAH</h2>
-                    <p class="text-[11px] text-slate-600">Jl. Raya Panceng No. 45, Panceng, Gresik - Telp. (031) 3948821</p>
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-700">YAYASAN AL-BISRI PONDOK PESANTREN HIDAYATULLAH PANCENG</h3>
+                    <h2 class="text-lg sm:text-xl font-black text-emerald-900 tracking-tight">SMK DARUL HIJRAH</h2>
+                    <p class="text-[11px] text-slate-600">Jl. Raya Deandles No.6, RW.02, Prupuh, Kec. Panceng, Kabupaten Gresik, Jawa Timur 61156 Telphone 0896-7314-6171</p>
                   </div>
                   <div class="w-14 h-14 flex items-center justify-center text-amber-300 text-2xl font-bold shrink-0" id="renderLogoKanan2">
                     <i class="fa-solid fa-mosque"></i>
@@ -825,7 +830,7 @@
               <div class="flex items-center"><span class="w-36 text-slate-600">NPSN</span><span>:</span> <strong class="ml-2 font-mono">69981240</strong></div>
               <div class="flex items-center"><span class="w-36 text-slate-600">Semester</span><span>:</span> <strong id="rap2Semester" class="ml-2">1 (Ganjil)</strong></div>
               <div class="flex items-center"><span class="w-36 text-slate-600">NIS</span><span>:</span> <strong id="rap2Nis" class="ml-2 font-mono">-</strong></div>
-              <div class="flex items-center"><span class="w-36 text-slate-600">Tahun Pelajaran</span><span>:</span> <strong id="rap2Tahun" class="ml-2">2026/2027</strong></div>
+              <div class="flex items-center"><span class="w-36 text-slate-600">Tahun Pelajaran</span><span>:</span> <strong id="rap2Tahun" class="ml-2">2027/2028</strong></div>
               <div class="flex items-center"><span class="w-36 text-slate-600">Nama Sekolah</span><span>:</span> <strong class="ml-2">SMK Darul Hijrah Panceng</strong></div>
             </div>
 
@@ -902,7 +907,7 @@
                   <div id="renderTtdRaport2" class="relative z-10 w-full h-full flex items-center justify-center"></div>
                 </div>
                 <div>
-                  <p class="font-bold underline" id="rap2KepsekNama">Drs. H. M. Zainul Arifin, M.Pd.I</p>
+                  <p class="font-bold underline" id="rap2KepsekNama">Ismail Hasan, S.Sos.</p>
                   <p class="text-[10px] text-slate-500" id="rap2KepsekNip">NIP. 19740512 200212 1 004</p>
                 </div>
               </div>
@@ -915,7 +920,7 @@
         <section id="viewPerpus" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Perpustakaan Digital & Sirkulasi Barcode</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Perpustakaan Digital & Pemindai Barcode</h2>
               <p class="text-xs text-slate-500">
                 Terintegrasi dengan Google Scholar, SINTA Kemenristek, Google Books, serta unggah berkas e-book santri.
               </p>
@@ -1055,7 +1060,7 @@
         <section id="viewModulAjar" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Modul Ajar & Perangkat Guru Berbasis AI</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Modul Ajar & Perangkat Guru</h2>
               <p class="text-xs text-slate-500">
                 Pusat kurikulum merdeka dengan generator modul AI otomatis, integrasi materi Google, dan unggah berkas.
               </p>
@@ -1173,14 +1178,17 @@
         <section id="viewLaporan" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Pusat Laporan & Rekapitulasi Resmi</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Pusat Laporan & Rekapitulasi</h2>
               <p class="text-xs text-slate-500">
-                Cetak langsung atau simpan / unduh laporan resmi berformat PDF berstandar kop surat SMK Darul Hijrah Panceng.
+                Cetak langsung atau simpan.
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <select id="filterKelasLaporan" onchange="renderOfficialReport()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
-                <option value="ALL">Semua Kelas / Rombel</option>
+              <select id="filterKelasLaporan" onchange="onKelasLaporanChange()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
+                <option value="ALL">Semua Kelas</option>
+              </select>
+              <select id="filterSiswaLaporan" onchange="renderOfficialReport()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
+                <option value="ALL">Semua Santri</option>
               </select>
               <button onclick="unduhLaporanPDF()" class="bg-amber-400 hover:bg-amber-500 text-hijau-950 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
                 <i class="fa-solid fa-file-pdf text-red-700"></i>
@@ -1209,10 +1217,10 @@
                     SMK DARUL HIJRAH PANCENG
                   </h1>
                   <p class="text-xs text-slate-600 leading-tight">
-                    NPSN: <span id="repNpsn">69981240</span> - Status: Terakreditasi - <span id="repAlamat">Jl. Raya Panceng No. 45, Panceng, Gresik</span>
+                    NPSN: <span id="repNpsn">69981240</span> - Status: Terakreditasi - <span id="repAlamat">Jl. Raya Deandles No.6, RW.02, Prupuh, Kec. Panceng, Kabupaten Gresik, Jawa Timur 61156</span>
                   </p>
                   <p class="text-[11px] text-slate-500 font-medium">
-                    Telp: <span id="repTelepon">(031) 3948821</span> - Email: <span id="repEmail">info@smkdarulhijrah.sch.id</span>
+                    Telp: <span id="repTelepon">0896-7314-6171</span> - Email: <span id="repEmail">darulhijrahpancenggresik@gmail.com</span>
                   </p>
                 </div>
               </div>
@@ -1223,7 +1231,7 @@
                 REKAPITULASI PRESENSI SANTRI
               </h3>
               <p class="text-xs text-slate-600 mt-1">
-                Kelas / Rombel: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2026/2027</span> (<span id="repSemester">Ganjil</span>) - Dicetak: <span id="repTglCetak">2026-11-23</span>
+                Kelas: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2027/2028</span> (<span id="repSemester">Ganjil</span>) - Dicetak: <span id="repTglCetak">2027-11-23</span>
               </p>
             </div>
 
@@ -1251,7 +1259,7 @@
               <div class="text-center flex flex-col justify-between h-44">
                 <div>
                   <p>Mengetahui,</p>
-                  <p class="font-bold">Kepala Tata Usaha / Operator</p>
+                  <p class="font-bold">Kepala Tata Usaha</p>
                 </div>
                 <div class="h-20 flex items-center justify-center"></div>
                 <div>
@@ -1272,7 +1280,7 @@
                   <div id="laporanTtdArea" class="relative z-10 w-full h-full flex items-center justify-center"></div>
                 </div>
                 <div>
-                  <p id="repKepsekNama" class="font-bold underline">Drs. H. M. Zainul Arifin, M.Pd.I</p>
+                  <p id="repKepsekNama" class="font-bold underline">Ismail Hasan, S.Sos.</p>
                   <p id="repKepsekNip" class="text-[10px] text-slate-500">NIP. 19740512 200212 1 004</p>
                 </div>
               </div>
@@ -1284,8 +1292,8 @@
         <section id="viewGuru" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Data Dewan Guru & Tenaga Kependidikan</h2>
-              <p class="text-xs text-slate-500">Direktori pendidik resmi SMK Darul Hijrah Panceng.</p>
+              <h2 class="text-xl font-bold text-hijau-950">Data Tenaga Pendidik & Tenaga Kependidikan</h2>
+              <p class="text-xs text-slate-500">Direktori pendidik SMK Darul Hijrah Panceng.</p>
             </div>
             <button onclick="openModalGuru()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-user-plus"></i>
@@ -1302,11 +1310,11 @@
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Rombongan Belajar & Wali Kelas</h2>
-              <p class="text-xs text-slate-500">Struktur rombel aktif tahun ajaran berjalan.</p>
+              <p class="text-xs text-slate-500">Struktur Kelas aktif tahun ajaran berjalan.</p>
             </div>
             <button onclick="openModalKelas()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-plus"></i>
-              <span>Tambah Rombel Baru</span>
+              <span>Tambah Kelas Baru</span>
             </button>
           </div>
           <div id="kelasGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1365,8 +1373,8 @@
         <section id="viewJadwal" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Jadwal Pembelajaran Mingguan</h2>
-              <p class="text-xs text-slate-500">Integrasi jadwal mengajar kelas dan laboratorium.</p>
+              <h2 class="text-xl font-bold text-hijau-950">Jadwal Pembelajaran Sekolah</h2>
+              <p class="text-xs text-slate-500">Jadwal mengajar kelas.</p>
             </div>
             <button onclick="openModalJadwal()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-calendar-plus"></i>
@@ -1430,7 +1438,7 @@
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Pengumuman Sekolah</h2>
-              <p class="text-xs text-slate-500">Publikasi informasi resmi pondok pesantren & SMK.</p>
+              <p class="text-xs text-slate-500">Publikasi informasi resmi pondok pesantren & Sekolah.</p>
             </div>
             <button onclick="openModalPengumuman()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-bullhorn"></i>
@@ -1570,48 +1578,45 @@
 
   <!-- ================= MODALS SECTION ================= -->
 
-  <!-- Modal Resize & Sesuaikan Ukuran Gambar Sebelum Konfirmasi -->
-  <div id="modalResizeGambar" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b">
+  <!-- Modal Crop & Zoom Gambar ala Media Sosial -->
+  <div id="modalResizeGambar" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2.5 border-b">
         <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
           <i class="fa-solid fa-crop-simple text-amber-500"></i>
-          <span>Ubah Ukuran Gambar Sebelum Konfirmasi</span>
+          <span>Sesuaikan & Zoom Foto</span>
         </h3>
-        <button onclick="batalResizeGambar()" class="text-slate-400 hover:text-slate-600">
+        <button type="button" onclick="batalResizeGambar()" class="text-slate-400 hover:text-slate-600">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
 
       <div class="space-y-3">
-        <!-- Canvas Preview Area -->
-        <div class="w-full h-64 bg-slate-100 rounded-xl border border-slate-300 flex items-center justify-center overflow-hidden relative">
-          <canvas id="resizeCanvas" class="max-w-full max-h-full object-contain shadow"></canvas>
+        <div class="w-full h-64 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-center overflow-hidden relative select-none cursor-grab active:cursor-grabbing" id="cropStageContainer">
+          <canvas id="resizeCanvas" class="max-w-full max-h-full object-contain"></canvas>
+          <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div class="w-44 h-44 rounded-full border-2 border-amber-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"></div>
+          </div>
         </div>
 
-        <!-- Slider Controls -->
         <div class="space-y-2 text-xs">
           <div class="flex items-center justify-between">
-            <label class="font-bold text-slate-700">Skala / Perbesar-Perkecil Gambar:</label>
+            <label class="font-bold text-slate-700">Zoom / Perbesar:</label>
             <span id="labelZoomGambar" class="font-mono font-bold text-hijau-800">100%</span>
           </div>
-          <input type="range" id="sliderZoomGambar" min="30" max="250" value="100" class="w-full accent-hijau-800" oninput="updateCanvasZoom(this.value)">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="adjustZoomStep(-15)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold"><i class="fa-solid fa-minus"></i></button>
+            <input type="range" id="sliderZoomGambar" min="50" max="300" value="100" class="flex-1 accent-hijau-800" oninput="updateCanvasZoom(this.value)">
+            <button type="button" onclick="adjustZoomStep(15)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold"><i class="fa-solid fa-plus"></i></button>
+          </div>
 
-          <div class="grid grid-cols-2 gap-3 pt-2">
-            <div>
-              <label class="block text-[10px] text-slate-500 font-bold mb-1">Maksimal Lebar (Pixel)</label>
-              <select id="selectMaxDimensi" class="w-full px-2 py-1.5 border rounded-lg text-xs" onchange="renderCanvasSource()">
-                <option value="400">400 x 400 px (Pas Foto / Profil)</option>
-                <option value="600" selected>600 x 600 px (Standar Sedang)</option>
-                <option value="1000">1000 x 1000 px (Kop Surat / Resolusi Tinggi)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[10px] text-slate-500 font-bold mb-1">Rotasi Gambar</label>
-              <button type="button" onclick="rotasiCanvasGambar()" class="w-full px-2 py-1.5 bg-slate-100 hover:bg-slate-200 border rounded-lg text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-rotate-right"></i> Putar 90&deg;
-              </button>
-            </div>
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button type="button" onclick="rotasiCanvasGambar()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border rounded-lg text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-rotate-right"></i> Putar 90&deg;
+            </button>
+            <button type="button" onclick="resetCropTransform()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border rounded-lg text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-arrows-rotate"></i> Reset Posisi
+            </button>
           </div>
         </div>
       </div>
@@ -1620,7 +1625,7 @@
         <button type="button" onclick="batalResizeGambar()" class="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-50">Batal</button>
         <button type="button" onclick="konfirmasiSimpanGambar()" class="px-5 py-2 bg-hijau-800 hover:bg-hijau-900 text-white font-bold rounded-lg shadow flex items-center gap-1.5">
           <i class="fa-solid fa-check"></i>
-          <span>Konfirmasi & Gunakan Gambar</span>
+          <span>Konfirmasi Gambar</span>
         </button>
       </div>
     </div>
@@ -1706,7 +1711,7 @@
               <input type="number" id="inpMapelFiqih" min="0" max="100" class="w-full p-1.5 border rounded font-mono">
             </div>
             <div>
-              <label class="block text-[10px] text-slate-600">Ushul Fiqh(0-100)</label>
+              <label class="block text-[10px] text-slate-600">Hadits(0-100)</label>
               <input type="number" id="inpMapelTarikh" min="0" max="100" class="w-full p-1.5 border rounded font-mono">
             </div>
             <div>
@@ -1718,7 +1723,7 @@
               <input type="number" id="inpMapelTilawati" min="0" max="100" class="w-full p-1.5 border rounded font-mono">
             </div>
             <div>
-              <label class="block text-[10px] text-slate-600">Hadits (0-100)</label>
+              <label class="block text-[10px] text-slate-600">Kejuruan Produktif (0-100)</label>
               <input type="number" id="inpMapelKejuruan" min="0" max="100" class="w-full p-1.5 border rounded font-mono font-bold text-hijau-900">
             </div>
           </div>
@@ -2261,9 +2266,15 @@
               <option value="Umum">Informasi Umum</option>
             </select>
           </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Tanggal</label>
-            <input type="date" id="pengumumanTanggal" class="w-full px-3 py-2 border rounded-lg focus:outline-none">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Dari Tanggal</label>
+              <input type="date" id="pengumumanTanggalMulai" required class="w-full px-2.5 py-2 border rounded-lg focus:outline-none font-medium">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Sampai Tanggal</label>
+              <input type="date" id="pengumumanTanggalSelesai" required class="w-full px-2.5 py-2 border rounded-lg focus:outline-none font-medium">
+            </div>
           </div>
         </div>
 
@@ -2395,7 +2406,11 @@
   <!-- ================= JAVASCRIPT LOGIC & DATABASE ENGINE ================= -->
   <script>
     // KEY PENYIMPANAN LOCALSTORAGE
-    const STORAGE_KEY = "SIMS_DARUL_HIJRAH_PANCENG_DATA_V5";
+    const STORAGE_KEY = "SIMS_DARUL_HIJRAH_PANCENG_DATA_V7_FINAL";
+    // Otomatis bersihkan cache lokal lama agar perubahan langsung aktif seketika
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch(e) {}
 
     // DATA AWAL SMK DARUL HIJRAH PANCENG
     const INITIAL_DEFAULT_DATA = {
@@ -2418,8 +2433,8 @@
         imgLogoSekolah: ""
       },
       raportCustom: {},
-      operatorTU: {
-        nama: "Siti Aisyah, S.Kom",
+      KepalaTU: {
+        nama: "Abdul Rahman, S.Pd.",
         nip: "199308122020122018",
         foto: ""
       },
@@ -2457,7 +2472,11 @@
         { id: "S05", nis: "240105", nama: "Zainal Abidin", jk: "L", kelasId: "K01", jurusanId: "J01", telp: "085712340005", ortu: "Bpk. Mas'ud", telpOrtu: "085799990005", status: "Aktif", qrToken: "DH-BC-240105-654", foto: "" },
         { id: "S06", nis: "240106", nama: "Dewi Safitri", jk: "P", kelasId: "K02", jurusanId: "J02", telp: "085712340006", ortu: "Ibu Hartatik", telpOrtu: "085799990006", status: "Aktif", qrToken: "DH-BC-240106-321", foto: "" }
       ],
-      absensi: [],
+      absensi: [
+        { id: "ABS-01", siswaId: "S01", tanggal: "2026-11-22", waktu: "06:48:12", tipe: "MASUK", status: "HADIR", metode: "BARCODE", keterangan: "Tepat Waktu", petugas: "Tata Usaha" },
+        { id: "ABS-02", siswaId: "S02", tanggal: "2026-11-22", waktu: "07:05:40", tipe: "MASUK", status: "HADIR", metode: "BARCODE", keterangan: "Tepat Waktu", petugas: "Tata Usaha" },
+        { id: "ABS-03", siswaId: "S03", tanggal: "2026-11-22", waktu: "07:22:15", tipe: "MASUK", status: "TERLAMBAT", metode: "BARCODE", keterangan: "Terlambat 7 menit", petugas: "Tata Usaha" }
+      ],
       buku: [
         { id: "BK01", barcode: "BK-TKJ-01", judul: "Administrasi Server Jaringan Linux", pengarang: "Onno W. Purbo", penerbit: "Andi Publisher", kategori: "Teknologi & Kejuruan", stok: 8, fileEbook: "Modul_Linux_Server.pdf" },
         { id: "BK02", barcode: "BK-RPL-02", judul: "Dasar Pemrograman Web Fullstack", pengarang: "Budi Raharjo", penerbit: "Informatika", kategori: "Teknologi & Kejuruan", stok: 12, fileEbook: "Web_Fullstack.pdf" },
@@ -2515,6 +2534,8 @@
     }
 
     function refreshActiveViews() {
+      if (typeof renderAvatarTU === "function") renderAvatarTU();
+      if (typeof renderUploadedAssets === "function") renderUploadedAssets();
       if (typeof updateDashboardMetrics === "function") updateDashboardMetrics();
       if (typeof renderSiswaTable === "function") renderSiswaTable();
       if (typeof renderKartuSiswa === "function") renderKartuSiswa();
@@ -2522,8 +2543,17 @@
       if (typeof renderBukuTable === "function") renderBukuTable();
       if (typeof renderPeminjamanTable === "function") renderPeminjamanTable();
       if (typeof renderSarprasTable === "function") renderSarprasTable();
+      if (typeof renderModulAjarGrid === "function") renderModulAjarGrid();
       if (typeof renderRiwayatTable === "function") renderRiwayatTable();
+      if (typeof renderRiwayatPerpusTable === "function") renderRiwayatPerpusTable();
       if (typeof renderOfficialReport === "function") renderOfficialReport();
+      if (typeof renderGuruGrid === "function") renderGuruGrid();
+      if (typeof renderKelasGrid === "function") renderKelasGrid();
+      if (typeof renderJurusanGrid === "function") renderJurusanGrid();
+      if (typeof renderMapelTable === "function") renderMapelTable();
+      if (typeof renderJadwalTable === "function") renderJadwalTable();
+      if (typeof renderNilaiTable === "function") renderNilaiTable();
+      if (typeof renderPengumumanGrid === "function") renderPengumumanGrid();
     }
 
     function resetDataKeDefault() {
@@ -2539,71 +2569,53 @@
     let currentScanMode = "PRESENSI";
     let cameraStream = null;
 
-    // GENERATOR BARCODE SEGI EMPAT (2D MATRIX QR-STYLE SVG)
+    // GENERATOR QR CODE TERSTANDAR INTERNASIONAL (ISO/IEC 18004) VIA QRCODE.JS
     function generateSquareBarcodeSVG(tokenStr, size = 160) {
-      const hash = Array.from(tokenStr).reduce((acc, char) => (acc * 33 + char.charCodeAt(0)) % 2147483647, 19);
-      const gridCount = 21;
-      const cellSize = size / gridCount;
-      let rects = "";
+      const safeToken = String(tokenStr || "").trim() || "DH-DEFAULT";
+      const cleanId = safeToken.replace(/[^a-zA-Z0-9]/g, '') + "_" + Math.random().toString(36).substring(2, 7);
+      const holderId = `qr-holder-${cleanId}`;
 
-      // 3 Kotak Sudut Identifikasi QR
-      function drawCorner(xOffset, yOffset) {
-        rects += `<rect x="${xOffset * cellSize}" y="${yOffset * cellSize}" width="${7 * cellSize}" height="${7 * cellSize}" fill="#0a665e" rx="4"/>`;
-        rects += `<rect x="${(xOffset + 1) * cellSize}" y="${(yOffset + 1) * cellSize}" width="${5 * cellSize}" height="${5 * cellSize}" fill="#ffffff"/>`;
-        rects += `<rect x="${(xOffset + 2) * cellSize}" y="${(yOffset + 2) * cellSize}" width="${3 * cellSize}" height="${3 * cellSize}" fill="#0a665e" rx="2"/>`;
-      }
-
-      drawCorner(0, 0);
-      drawCorner(14, 0);
-      drawCorner(0, 14);
-
-      // Data Grid Matriks Segi Empat
-      for (let r = 0; r < gridCount; r++) {
-        for (let c = 0; c < gridCount; c++) {
-          const inCorner1 = r < 7 && c < 7;
-          const inCorner2 = r < 7 && c >= 14;
-          const inCorner3 = r >= 14 && c < 7;
-          if (inCorner1 || inCorner2 || inCorner3) continue;
-
-          const isDark = ((r * 11 + c * 17 + hash + tokenStr.charCodeAt((r + c) % tokenStr.length)) % 3) === 0;
-          if (isDark) {
-            rects += `<rect x="${(c * cellSize).toFixed(2)}" y="${(r * cellSize).toFixed(2)}" width="${(cellSize * 0.95).toFixed(2)}" height="${(cellSize * 0.95).toFixed(2)}" fill="#0a665e" rx="1.2"/>`;
+      setTimeout(() => {
+        const el = document.getElementById(holderId);
+        if (!el) return;
+        el.innerHTML = "";
+        if (typeof QRCode !== "undefined") {
+          try {
+            new QRCode(el, {
+              text: safeToken,
+              width: size,
+              height: size,
+              colorDark: "#042e2a",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.M
+            });
+          } catch (e) {
+            el.innerHTML = `<div style="font-size:9px;font-family:monospace;padding:4px;">${safeToken}</div>`;
           }
         }
-      }
+      }, 10);
 
       return `
-        <svg id="svg-${tokenStr.replace(/[^a-zA-Z0-9]/g, '')}" viewBox="0 0 ${size} ${size}" class="w-full h-auto block" style="background:#ffffff; padding: 6px; border-radius: 10px;">
-          ${rects}
-        </svg>
+        <div id="${holderId}" data-qr-token="${safeToken}" class="qr-standard-box inline-flex items-center justify-center bg-white p-1.5 rounded-lg" style="min-width:${Math.min(size, 96)}px;min-height:${Math.min(size, 96)}px;"></div>
       `;
     }
 
     // UNDUH BARCODE SEGI EMPAT KE FORMAT PNG / JPG
     function downloadBarcodeImage(tokenStr, studentName = "santri", format = "png") {
-      const cleanId = tokenStr.replace(/[^a-zA-Z0-9]/g, '');
-      const svgEl = document.getElementById(`svg-${cleanId}`);
-      if (!svgEl) {
-        showToast("Elemen barcode tidak ditemukan.", "error");
-        return;
-      }
+      const targetBox = Array.from(document.querySelectorAll('.qr-standard-box')).find(el => el.getAttribute('data-qr-token') === tokenStr);
+      const srcCanvas = targetBox ? targetBox.querySelector('canvas') : null;
+      const srcImg = targetBox ? targetBox.querySelector('img') : null;
 
-      const svgData = new XMLSerializer().serializeToString(svgEl);
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      const img = new Image();
-
       canvas.width = 500;
       canvas.height = 500;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      img.onload = () => {
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 25, 25, 450, 450);
-
-        // Watermark text
+      const finishExport = () => {
         ctx.fillStyle = "#0a665e";
-        ctx.font = "bold 16px 'Plus Jakarta Sans', sans-serif";
+        ctx.font = "bold 15px 'Plus Jakarta Sans', sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(`SMK DARUL HIJRAH - ${tokenStr}`, 250, 485);
 
@@ -2612,16 +2624,36 @@
         const dataUrl = canvas.toDataURL(mime, 0.95);
 
         const a = document.createElement("a");
-        a.download = `Barcode_${studentName.replace(/\s+/g, '_')}_${tokenStr}.${fileExt}`;
+        a.download = `QRCode_${studentName.replace(/\s+/g, '_')}_${tokenStr}.${fileExt}`;
         a.href = dataUrl;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-
-        showToast(`Barcode ${studentName} berhasil diunduh (${fileExt.toUpperCase()}).`);
+        showToast(`QR Code ${studentName} berhasil diunduh (${fileExt.toUpperCase()}).`);
       };
 
-      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+      if (srcCanvas) {
+        ctx.drawImage(srcCanvas, 35, 35, 430, 430);
+        finishExport();
+      } else if (srcImg && srcImg.src) {
+        const tmpImg = new Image();
+        tmpImg.crossOrigin = "anonymous";
+        tmpImg.onload = () => {
+          ctx.drawImage(tmpImg, 35, 35, 430, 430);
+          finishExport();
+        };
+        tmpImg.src = srcImg.src;
+      } else if (typeof QRCode !== "undefined") {
+        const tempDiv = document.createElement("div");
+        new QRCode(tempDiv, { text: tokenStr, width: 430, height: 430 });
+        setTimeout(() => {
+          const c2 = tempDiv.querySelector("canvas");
+          if (c2) ctx.drawImage(c2, 35, 35, 430, 430);
+          finishExport();
+        }, 50);
+      } else {
+        showToast("Elemen barcode belum siap diunduh.", "error");
+      }
     }
 
     // UPLOAD FOTO PROFIL HANDLERS (BASE64 ENCODING)
@@ -2630,18 +2662,10 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          bukaModalResizeGambar(event.target.result, (resized) => {
-            DB.operatorTU.foto = resized;
-            persistDatabase();
-            renderAvatarTU();
-            renderUploadedAssets();
-            showToast("Foto profil Operator Tata Usaha diperbarui!");
-          });
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-    function _dummy_unused_tu() {
+          DB.operatorTU.foto = event.target.result;
+          persistDatabase();
+                renderAvatarTU();
+      renderUploadedAssets();
 
       // Form Simpan Nilai Raport Santri (Format 1 & 2)
       const formRaport = document.getElementById("formSaveRaportData");
@@ -2651,24 +2675,31 @@
           const santriId = document.getElementById("inputRaportSiswaSelect").value;
           if (!santriId) return;
 
+          const getVal = (id, def = "") => {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : def;
+          };
+          const getNum = (id, def = 0) => {
+            const el = document.getElementById(id);
+            return el ? (parseInt(el.value) || def) : def;
+          };
+
           if (!DB.raportCustom) DB.raportCustom = {};
           DB.raportCustom[santriId] = {
-            tahsinJilid: document.getElementById("inpTahsinJilid").value.trim() || "IV",
-            tahsinHal: document.getElementById("inpTahsinHal").value.trim() || "1 - 40",
-            tahsinNilai: parseInt(document.getElementById("inpTahsinNilai").value) || 92,
-            tahfidzNilai: parseInt(document.getElementById("inpTahfidzNilai").value) || 91,
-            pengajarAlquran: document.getElementById("inpPengajarAlquran").value.trim() || "M. Ridwan, M.Pd.I",
-            adabAkhlak: document.getElementById("inpAdabAkhlak").value.trim(),
-            mapelBarab: parseInt(document.getElementById("inpMapelBarab").value) || 90,
-            mapelAkhlaq: parseInt(document.getElementById("inpMapelAkhlaq").value) || 92,
-            mapelFiqih: parseInt(document.getElementById("inpMapelFiqih").value) || 90,
-            mapelTarikh: parseInt(document.getElementById("inpMapelTarikh").value) || 88,
-            mapelQuran: parseInt(document.getElementById("inpMapelQuran").value) || 95,
-            mapelTilawati: parseInt(document.getElementById("inpMapelTilawati").value) || 90,
-            mapelSurah: parseInt(document.getElementById("inpMapelSurah").value) || 94,
-            mapelDoa: parseInt(document.getElementById("inpMapelDoa").value) || 90,
-            mapelKejuruan: parseInt(document.getElementById("inpMapelKejuruan").value) || 92,
-            catatanWali: document.getElementById("inpCatatanWali").value.trim()
+            tahsinJilid: getVal("inpTahsinJilid", "IV"),
+            tahsinHal: getVal("inpTahsinHal", "1 - 40"),
+            tahsinNilai: getNum("inpTahsinNilai", 92),
+            tahfidzNilai: getNum("inpTahfidzNilai", 91),
+            pengajarAlquran: getVal("inpPengajarAlquran", "M. Ridwan, M.Pd.I"),
+            adabAkhlak: getVal("inpAdabAkhlak", ""),
+            mapelBarab: getNum("inpMapelBarab", 90),
+            mapelAkhlaq: getNum("inpMapelAkhlaq", 92),
+            mapelFiqih: getNum("inpMapelFiqih", 90),
+            mapelTarikh: getNum("inpMapelTarikh", 88),
+            mapelQuran: getNum("inpMapelQuran", 95),
+            mapelTilawati: getNum("inpMapelTilawati", 90),
+            mapelKejuruan: getNum("inpMapelKejuruan", 92),
+            catatanWali: getVal("inpCatatanWali", "")
           };
 
           persistDatabase();
@@ -2677,6 +2708,10 @@
           showToast("Data nilai raport santri berhasil disimpan!");
         });
       }
+          showToast("Foto profil Operator Tata Usaha diperbarui!");
+        };
+        reader.readAsDataURL(file);
+      }
     }
 
     
@@ -2684,30 +2719,91 @@
     let currentImageCallback = null;
     let currentRotation = 0;
     let currentScale = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDraggingCrop = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
 
     function bukaModalResizeGambar(base64Data, onConfirmCallback) {
       currentImageCallback = onConfirmCallback;
-      currentRotation = 0;
-      currentScale = 1;
-      document.getElementById("sliderZoomGambar").value = 100;
-      document.getElementById("labelZoomGambar").innerText = "100%";
-
+      resetCropTransformInternal();
       currentRawImage = new Image();
       currentRawImage.onload = function() {
         renderCanvasSource();
+        initCropDragEvents();
         document.getElementById("modalResizeGambar").classList.remove("hidden");
       };
       currentRawImage.src = base64Data;
     }
 
+    function resetCropTransformInternal() {
+      currentRotation = 0;
+      currentScale = 1;
+      panX = 0;
+      panY = 0;
+      const sl = document.getElementById("sliderZoomGambar");
+      const lb = document.getElementById("labelZoomGambar");
+      if (sl) sl.value = 100;
+      if (lb) lb.innerText = "100%";
+    }
+
+    function resetCropTransform() {
+      resetCropTransformInternal();
+      renderCanvasSource();
+    }
+
+    function adjustZoomStep(delta) {
+      const sl = document.getElementById("sliderZoomGambar");
+      if (!sl) return;
+      let val = Math.min(300, Math.max(50, (parseInt(sl.value) || 100) + delta));
+      sl.value = val;
+      updateCanvasZoom(val);
+    }
+
+    function initCropDragEvents() {
+      const stage = document.getElementById("cropStageContainer");
+      if (!stage || stage.dataset.dragBound) return;
+      stage.dataset.dragBound = "1";
+
+      const startDrag = (clientX, clientY) => {
+        isDraggingCrop = true;
+        dragStartX = clientX - panX;
+        dragStartY = clientY - panY;
+      };
+      const moveDrag = (clientX, clientY) => {
+        if (!isDraggingCrop) return;
+        panX = clientX - dragStartX;
+        panY = clientY - dragStartY;
+        renderCanvasSource();
+      };
+      const endDrag = () => {
+        isDraggingCrop = false;
+      };
+
+      stage.addEventListener("mousedown", (e) => startDrag(e.clientX, e.clientY));
+      window.addEventListener("mousemove", (e) => moveDrag(e.clientX, e.clientY));
+      window.addEventListener("mouseup", endDrag);
+
+      stage.addEventListener("touchstart", (e) => {
+        if (e.touches.length === 1) startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      window.addEventListener("touchmove", (e) => {
+        if (e.touches.length === 1) moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      window.addEventListener("touchend", endDrag);
+    }
+
     function batalResizeGambar() {
-      document.getElementById("modalResizeGambar").classList.add("hidden");
+      const m = document.getElementById("modalResizeGambar");
+      if (m) m.classList.add("hidden");
       currentImageCallback = null;
     }
 
     function updateCanvasZoom(val) {
-      currentScale = val / 100;
-      document.getElementById("labelZoomGambar").innerText = `${val}%`;
+      currentScale = (parseInt(val) || 100) / 100;
+      const lb = document.getElementById("labelZoomGambar");
+      if (lb) lb.innerText = `${val}%`;
       renderCanvasSource();
     }
 
@@ -2720,46 +2816,38 @@
       const canvas = document.getElementById("resizeCanvas");
       if (!canvas || !currentRawImage.src) return;
       const ctx = canvas.getContext("2d");
+      const size = 400;
+      canvas.width = size;
+      canvas.height = size;
 
-      const maxDim = parseInt(document.getElementById("selectMaxDimensi")?.value || 600);
-      let targetW = currentRawImage.width;
-      let targetH = currentRawImage.height;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, size, size);
 
-      // Rasio ukuran
-      if (targetW > maxDim || targetH > maxDim) {
-        if (targetW > targetH) {
-          targetH = Math.round(targetH * (maxDim / targetW));
-          targetW = maxDim;
-        } else {
-          targetW = Math.round(targetW * (maxDim / targetH));
-          targetH = maxDim;
-        }
-      }
+      const iw = currentRawImage.width;
+      const ih = currentRawImage.height;
+      const baseRatio = Math.min(size / iw, size / ih);
+      const drawW = iw * baseRatio * currentScale;
+      const drawH = ih * baseRatio * currentScale;
 
-      const isRotated = currentRotation === 90 || currentRotation === 270;
-      canvas.width = isRotated ? targetH : targetW;
-      canvas.height = isRotated ? targetW : targetH;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.translate(size / 2 + panX, size / 2 + panY);
       ctx.rotate((currentRotation * Math.PI) / 180);
-      ctx.scale(currentScale, currentScale);
-      ctx.drawImage(currentRawImage, -targetW / 2, -targetH / 2, targetW, targetH);
+      ctx.drawImage(currentRawImage, -drawW / 2, -drawH / 2, drawW, drawH);
       ctx.restore();
     }
 
     function konfirmasiSimpanGambar() {
       const canvas = document.getElementById("resizeCanvas");
       if (!canvas) return;
-      const resultBase64 = canvas.toDataURL("image/jpeg", 0.9);
+      const resultBase64 = canvas.toDataURL("image/jpeg", 0.92);
       if (typeof currentImageCallback === "function") {
         currentImageCallback(resultBase64);
       }
-      document.getElementById("modalResizeGambar").classList.add("hidden");
-      showToast("Ukuran gambar berhasil disesuaikan dan diterapkan.");
+      const m = document.getElementById("modalResizeGambar");
+      if (m) m.classList.add("hidden");
+      showToast("Foto terbaru telah dikonfirmasi.");
     }
-
+    
     function renderAvatarTU() {
       const av = document.getElementById("avatarTU");
       if (DB.operatorTU && DB.operatorTU.foto) {
@@ -2774,10 +2862,8 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          bukaModalResizeGambar(event.target.result, (resized) => {
-            document.getElementById("siswaFotoData").value = resized;
-            document.getElementById("previewFotoSiswa").innerHTML = `<img src="${resized}" class="w-full h-full object-cover">`;
-          });
+          document.getElementById("siswaFotoData").value = event.target.result;
+          document.getElementById("previewFotoSiswa").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
         };
         reader.readAsDataURL(file);
       }
@@ -2788,10 +2874,8 @@
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          bukaModalResizeGambar(event.target.result, (resized) => {
-            document.getElementById("guruFotoData").value = resized;
-            document.getElementById("previewFotoGuru").innerHTML = `<img src="${resized}" class="w-full h-full object-cover">`;
-          });
+          document.getElementById("guruFotoData").value = event.target.result;
+          document.getElementById("previewFotoGuru").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
         };
         reader.readAsDataURL(file);
       }
@@ -3035,11 +3119,12 @@
       } else {
         tbody.innerHTML = filtered.map(b => `
           <tr class="hover:bg-teal-50/40 transition">
-          <td class="py-3 px-4">
-            <div class="w-16">
-              ${generateSquareBarcodeSVG(b.barcode, 60)}
-            </div>
-          </td>
+            <td class="py-3 px-4">
+              <div class="w-16">
+                ${generateSquareBarcodeSVG(b.barcode, 60)}
+                <span class="font-mono text-[9px] text-hijau-800 font-bold block text-center mt-0.5">${b.barcode}</span>
+              </div>
+            </td>
             <td class="py-3 px-4 font-bold text-slate-900">
               <div>${b.judul}</div>
               ${b.fileEbook ? `<span class="inline-flex items-center gap-1 text-[10px] text-teal-700 font-medium mt-0.5"><i class="fa-solid fa-file-pdf text-red-600"></i> ${b.fileEbook}</span>` : ''}
@@ -3081,89 +3166,6 @@
 
     // PENGUNDUHAN BERKAS MODUL AJAR (DOKUMEN LENGKAP KURIKULUM MERDEKA 2026/2027)
         // ================= REAL-TIME CLOCK WITH HOURS, MINUTES, SECONDS =================
-    
-    function downloadBukuEbook(bukuId) {
-      const b = DB.buku.find(item => item.id === bukuId);
-      if (!b) return;
-
-      showToast(`Mengunduh E-Book: ${b.judul}...`);
-
-      // Generate a downloadable text/doc format of the book
-      const content = `=======================================================
-PERPUSTAKAAN DIGITAL SMK DARUL HIJRAH PANCENG
-=======================================================
-Judul Buku   : ${b.judul}
-Barcode      : ${b.barcode}
-Kategori     : ${b.kategori}
-Pengarang    : ${b.pengarang}
-Penerbit     : ${b.penerbit}
-Tahun Akses  : 2026/2027
-Status       : E-Book Resmi Terverifikasi Perpustakaan SIMS
-=======================================================
-
-RINGKASAN & MATERI BUKU:
-Buku ini memuat panduan pembelajaran, referensi kurikulum kejuruan, serta literatur pendukung santri SMK Darul Hijrah Panceng Gresik.
-
-Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bagi santri dan tenaga pendidik SMK Darul Hijrah.
-`;
-
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `EBook_${b.barcode}_${b.judul.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    
-    function editLogPustaka(pId) {
-      const p = DB.peminjaman.find(item => item.id === pId);
-      if (!p) return;
-      const newStatus = prompt("Ubah status transaksi pustaka (DIPINJAM / KEMBALI):", p.status);
-      if (newStatus && (newStatus.toUpperCase() === "DIPINJAM" || newStatus.toUpperCase() === "KEMBALI")) {
-        p.status = newStatus.toUpperCase();
-        persistDatabase();
-        renderRiwayatPerpusTable();
-        renderPeminjamanTable();
-        showToast("Status log peminjaman berhasil diperbarui.");
-      }
-    }
-
-    function deleteLogPustaka(pId) {
-      if (confirm("Apakah Anda yakin ingin menghapus data log perpustakaan ini?")) {
-        DB.peminjaman = DB.peminjaman.filter(item => item.id !== pId);
-        persistDatabase();
-        renderRiwayatPerpusTable();
-        renderPeminjamanTable();
-        showToast("Log riwayat pustaka berhasil dihapus.");
-      }
-    }
-
-    
-    function hapusLogPresensi(absId) {
-      if (confirm("Hapus baris data presensi ini?")) {
-        DB.absensi = DB.absensi.filter(a => a.id !== absId);
-        persistDatabase();
-        updateDashboardMetrics();
-        renderRiwayatTable();
-        showToast("Data presensi berhasil dihapus.");
-      }
-    }
-
-    function kosongkanPresensiHariIni() {
-      if (confirm("Apakah Anda yakin ingin menghapus/mengosongkan seluruh riwayat presensi hari ini?")) {
-        const today = new Date().toISOString().split('T')[0];
-        DB.absensi = DB.absensi.filter(a => a.tanggal !== today);
-        persistDatabase();
-        updateDashboardMetrics();
-        renderRiwayatTable();
-        showToast("Seluruh riwayat presensi hari ini telah dibersihkan.");
-      }
-    }
-
     function startRealtimeClock() {
       function updateClock() {
         const now = new Date();
@@ -3344,6 +3346,7 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
             margin-bottom: 16pt;
           }
         </style>
+      
       </head>
       <body>
         <div class="header-box">
@@ -3536,29 +3539,29 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
         mapelTarikh: 88,
         mapelQuran: 95,
         mapelTilawati: 90,
-        mapelSurah: 94,
-        mapelDoa: 90,
         mapelKejuruan: 92,
         catatanWali: "Tingkatkan lagi belajarnya, diulang-ulang hapalannya di rumah dan jangan lupa mengerjakan sholat lima waktu."
       };
 
-      document.getElementById("inpTahsinJilid").value = data.tahsinJilid;
-      document.getElementById("inpTahsinHal").value = data.tahsinHal;
-      document.getElementById("inpTahsinNilai").value = data.tahsinNilai;
-      document.getElementById("inpTahfidzNilai").value = data.tahfidzNilai;
-      document.getElementById("inpPengajarAlquran").value = data.pengajarAlquran;
-      document.getElementById("inpAdabAkhlak").value = data.adabAkhlak;
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+      };
 
-      document.getElementById("inpMapelBarab").value = data.mapelBarab;
-      document.getElementById("inpMapelAkhlaq").value = data.mapelAkhlaq;
-      document.getElementById("inpMapelFiqih").value = data.mapelFiqih;
-      document.getElementById("inpMapelTarikh").value = data.mapelTarikh;
-      document.getElementById("inpMapelQuran").value = data.mapelQuran;
-      document.getElementById("inpMapelTilawati").value = data.mapelTilawati;
-      document.getElementById("inpMapelSurah").value = data.mapelSurah;
-      document.getElementById("inpMapelDoa").value = data.mapelDoa;
-      document.getElementById("inpMapelKejuruan").value = data.mapelKejuruan;
-      document.getElementById("inpCatatanWali").value = data.catatanWali;
+      setVal("inpTahsinJilid", data.tahsinJilid || "IV");
+      setVal("inpTahsinHal", data.tahsinHal || "1 - 40");
+      setVal("inpTahsinNilai", data.tahsinNilai || 92);
+      setVal("inpTahfidzNilai", data.tahfidzNilai || 91);
+      setVal("inpPengajarAlquran", data.pengajarAlquran || "M. Ridwan, M.Pd.I");
+      setVal("inpAdabAkhlak", data.adabAkhlak || "");
+      setVal("inpMapelBarab", data.mapelBarab || 90);
+      setVal("inpMapelAkhlaq", data.mapelAkhlaq || 92);
+      setVal("inpMapelFiqih", data.mapelFiqih || 90);
+      setVal("inpMapelTarikh", data.mapelTarikh || 88);
+      setVal("inpMapelQuran", data.mapelQuran || 95);
+      setVal("inpMapelTilawati", data.mapelTilawati || 90);
+      setVal("inpMapelKejuruan", data.mapelKejuruan || 92);
+      setVal("inpCatatanWali", data.catatanWali || "");
     }
 
     function angkaKeTerbilang(nilai) {
@@ -3649,10 +3652,10 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
           { no: 1, nama: "Information Technology", kkm: 70, nilai: data.mapelBarab },
           { no: 2, nama: "Sirah Nabawi", kkm: 75, nilai: data.mapelAkhlaq },
           { no: 3, nama: "Tajwid", kkm: 75, nilai: data.mapelFiqih },
-          { no: 4, nama: "Ushul Fiqh", kkm: 75, nilai: data.mapelTarikh },
+          { no: 4, nama: "Hadits", kkm: 75, nilai: data.mapelTarikh },
           { no: 5, nama: "Manajemen Lembaga", kkm: 75, nilai: data.mapelQuran },
           { no: 6, nama: "tafsir", kkm: 75, nilai: data.mapelTilawati },
-          { no: 7, nama: "Hadits", kkm: 75, nilai: data.mapelHadits }
+          { no: 7, nama: "Kompetensi Kejuruan Terpadu", kkm: 75, nilai: data.mapelKejuruan }
         ];
 
         let totalNilai = 0;
@@ -3684,33 +3687,40 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       renderUploadedAssets();
     }
 
-    function unduhLaporanPDF() {
-      const element = document.getElementById("printableArea");
+    
+    function unduhRaportPDF() {
+      const activeContainerId = currentRaportTab === 'alquran' ? 'containerRaportAlquran' : 'containerRaportSemester';
+      const element = document.getElementById(activeContainerId);
       if (!element) {
-        showToast("Area laporan tidak ditemukan!", "error");
+        showToast("Lembar raport tidak ditemukan!", "error");
         return;
       }
-
-      showToast("Mengkonversi laporan ke berkas PDF...", "info");
-
+      showToast("Mengkonversi lembar raport ke berkas PDF...", "info");
+      const namaSantri = document.getElementById(currentRaportTab === 'alquran' ? 'rap1NamaSantri' : 'rap2Nama')?.innerText || "Santri";
+      const opt = {
+        margin: [5, 5, 5, 5],
+        filename: `Raport_${namaSantri.replace(/\s+/g, '_')}_${currentRaportTab.toUpperCase()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
       if (typeof html2pdf !== "undefined") {
-        const opt = {
-          margin: [8, 8, 8, 8],
-          filename: `Laporan_Presensi_SMK_Darul_Hijrah_${new Date().toISOString().split('T')[0]}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
         html2pdf().set(opt).from(element).save().then(() => {
-          showToast("Laporan PDF resmi berhasil diunduh!");
+          showToast("Raport PDF berhasil diunduh!");
         }).catch(err => {
-          console.error("Gagal html2pdf:", err);
-          window.print();
+          console.error(err);
+          cetakAreaTertentu(activeContainerId);
         });
       } else {
-        window.print();
+        cetakAreaTertentu(activeContainerId);
       }
+    }
+    
+    function unduhLaporanPDF() {
+      showToast("Mempersiapkan dokumen PDF resmi...");
+      setTimeout(() => {
+        window.print();
+      }, 400);
     }
 
     // RENDERING KARTU SANTRI DENGAN BARCODE SEGI EMPAT + UNDUH PNG/JPG
@@ -3755,17 +3765,18 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
               </div>
             </div>
 
-            <!-- Barcode Segi Empat & Action Unduh (Tanpa Teks di Bawah Barcode/QR) -->
+            <!-- Barcode Segi Empat & Action Unduh -->
             <div class="pt-3 border-t border-hijau-900 flex flex-col gap-2">
               <div class="flex items-center gap-3 bg-white p-2.5 rounded-xl shadow-inner text-slate-900">
-                <div class="w-24 shrink-0 flex items-center justify-center">
+                <div class="w-24 shrink-0">
                   ${generateSquareBarcodeSVG(s.qrToken, 120)}
                 </div>
                 <div class="flex-1 space-y-1 text-left">
-                  <div class="text-[10px] text-slate-600 font-semibold leading-tight">Barcode Resmi Presensi & Sirkulasi</div>
+                  <div class="font-mono text-[10px] font-bold text-hijau-950">${s.qrToken}</div>
+                  <div class="text-[9px] text-slate-500 leading-tight">Mendukung Scan Presensi & Peminjaman Perpustakaan</div>
                   <div class="flex items-center gap-1.5 pt-1">
                     <button onclick="downloadBarcodeImage('${s.qrToken}', '${s.nama}', 'png')" class="px-2 py-1 bg-hijau-800 hover:bg-hijau-900 text-white rounded text-[9px] font-bold flex items-center gap-1 shadow">
-                      <i class="fa-solid fa-download"></i> Unduh PNG
+                      <i class="fa-solid fa-download"></i> PNG
                     </button>
                     <button onclick="downloadBarcodeImage('${s.qrToken}', '${s.nama}', 'jpg')" class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-hijau-950 rounded text-[9px] font-bold flex items-center gap-1 shadow">
                       <i class="fa-solid fa-download"></i> JPG
@@ -3968,12 +3979,8 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
             <td class="py-3 px-4 text-slate-500">Tata Usaha</td>
             <td class="py-3 px-4 text-center">
               <div class="flex items-center justify-center gap-1.5">
-                <button onclick="editLogPustaka('${p.id}')" class="p-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition" title="Edit Transaksi">
-                  <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button onclick="deleteLogPustaka('${p.id}')" class="p-1.5 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition" title="Hapus Riwayat">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+                <button onclick="editLogPustaka('${p.id}')" class="p-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition" title="Edit Log Pustaka"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button onclick="deleteLogPustaka('${p.id}')" class="p-1.5 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition" title="Hapus Log Pustaka"><i class="fa-solid fa-trash-can"></i></button>
               </div>
             </td>
           </tr>
@@ -4013,7 +4020,7 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       const form = document.getElementById("formSaveGuru");
 
       if (id) {
-        title.innerText = "Edit Data Guru / Tendik";
+        title.innerText = "Edit Data Tenaga Pendidik / Tenaga Kependidikan";
         const g = DB.guru.find(item => item.id === id);
         document.getElementById("guruEditId").value = g.id;
         document.getElementById("guruNip").value = g.nip;
@@ -4023,7 +4030,7 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
         document.getElementById("guruJabatan").value = g.jabatan;
         document.getElementById("guruTelp").value = g.telp;
       } else {
-        title.innerText = "Tambah Guru / Tendik";
+        title.innerText = "Tambah Tenaga Pendidik / Tenaga Kependidikan";
         form.reset();
         document.getElementById("guruEditId").value = "";
       }
@@ -4039,7 +4046,7 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
     }
 
     function deleteGuru(id) {
-      if (confirm("Hapus data dewan guru ini?")) {
+      if (confirm("Hapus data Tenaga Pendidik dan Tenaga Kependidikan ini?")) {
         DB.guru = DB.guru.filter(g => g.id !== id);
         persistDatabase();
         renderGuruGrid();
@@ -4058,8 +4065,8 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       { id: "sarpras", label: "Pengelolaan Sarpras", icon: "fa-solid fa-boxes-stacked" },
       { id: "modulAjar", label: "Modul Ajar Guru", icon: "fa-solid fa-book-open-reader" },
       { id: "riwayat", label: "Riwayat & Log Pustaka", icon: "fa-solid fa-clock-rotate-left" },
-      { id: "laporan", label: "Pusat Laporan & Unduh PDF", icon: "fa-solid fa-file-invoice" },
-      { id: "guru", label: "Dewan Guru & Tendik", icon: "fa-solid fa-user-tie" },
+      { id: "laporan", label: "Pusat Laporan", icon: "fa-solid fa-file-invoice" },
+      { id: "guru", label: "Tenaga Pendidik & Tenaga Kependidikan", icon: "fa-solid fa-user-tie" },
       { id: "kelas", label: "Kelas & Rombel", icon: "fa-solid fa-layer-group" },
       { id: "jurusan", label: "Kompetensi Keahlian", icon: "fa-solid fa-network-wired" },
       { id: "mapel", label: "Mata Pelajaran", icon: "fa-solid fa-book-open" },
@@ -4176,11 +4183,6 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
               <td class="py-2.5 px-3 text-slate-600">${kelas ? kelas.nama : "-"}</td>
               <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-mono">${abs.metode}</span></td>
               <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeStyle}">${abs.status}</span></td>
-              <td class="py-2.5 px-3 text-center">
-                <button onclick="hapusLogPresensi('${abs.id}')" class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition" title="Hapus Data Ini">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </td>
             </tr>
           `;
         });
@@ -4203,12 +4205,7 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       });
     }
 
-    // SCANNER CORE (FAST RESPONSE AUTO-SCAN WITH JSQR)
-    let scanAnimationId = null;
-    let scanCanvas = null;
-    let lastScannedToken = "";
-    let lastScanTime = 0;
-
+    // SCANNER CORE
     async function startCamera() {
       const video = document.getElementById("videoElement");
       const overlay = document.getElementById("scannerOverlay");
@@ -4220,14 +4217,11 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       try {
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-blue-50 text-blue-800 border border-blue-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengaktifkan sensor kamera fast response...';
+        statusMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengaktifkan sensor kamera...';
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         cameraStream = stream;
         video.srcObject = stream;
-        video.setAttribute("playsinline", true);
         video.classList.remove("hidden");
         overlay.classList.remove("hidden");
         idleState.classList.add("hidden");
@@ -4235,67 +4229,15 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
         btnStop.classList.remove("hidden");
 
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-teal-50 text-hijau-800 border border-teal-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif (Fast-Scan Aktif). Arahkan barcode santri/buku ke dalam kotak pemindai.';
-
-        if (!scanCanvas) {
-          scanCanvas = document.createElement("canvas");
-        }
-
-        video.play();
-        requestAnimationFrame(tickFastScanner);
+        statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif. Arahkan barcode santri atau buku ke area reticle.';
       } catch (err) {
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-circle-info"></i> Kamera tidak terdeteksi atau izin ditolak. Silakan gunakan input manual.';
-      }
-    }
-
-    function tickFastScanner() {
-      const video = document.getElementById("videoElement");
-      if (video && video.readyState === video.HAVE_ENOUGH_DATA && cameraStream) {
-        scanCanvas.height = video.videoHeight;
-        scanCanvas.width = video.videoWidth;
-        const ctx = scanCanvas.getContext("2d", { willReadFrequently: true });
-        ctx.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
-        const imageData = ctx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-
-        if (typeof jsQR !== "undefined") {
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert"
-          });
-
-          if (code && code.data) {
-            const token = code.data.trim();
-            const now = Date.now();
-            if (token !== lastScannedToken || (now - lastScanTime) > 2500) {
-              lastScannedToken = token;
-              lastScanTime = now;
-              try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                osc.type = "sine";
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                osc.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.12);
-              } catch (e) {}
-
-              verifyScan(token);
-            }
-          }
-        }
-      }
-
-      if (cameraStream) {
-        scanAnimationId = requestAnimationFrame(tickFastScanner);
+        statusMsg.innerHTML = '<i class="fa-solid fa-circle-info"></i> Kamera tidak terdeteksi. Gunakan input manual di bawah.';
       }
     }
 
     function stopCamera() {
-      if (scanAnimationId) {
-        cancelAnimationFrame(scanAnimationId);
-        scanAnimationId = null;
-      }
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
         cameraStream = null;
@@ -4360,8 +4302,9 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
               <div class="text-[10px] text-slate-500">${s.telpOrtu}</div>
             </td>
             <td class="py-3 px-4">
-              <div class="w-16">
-                ${generateSquareBarcodeSVG(s.qrToken, 65)}
+              <div class="w-20">
+                ${generateSquareBarcodeSVG(s.qrToken, 70)}
+                <span class="font-mono text-[9px] text-slate-500 block text-center mt-0.5">${s.nis}</span>
               </div>
             </td>
             <td class="py-3 px-4">
@@ -4476,16 +4419,12 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
           <td class="py-3 px-4">
             <div class="w-16">
               ${generateSquareBarcodeSVG(b.barcode, 60)}
+              <span class="font-mono text-[9px] text-hijau-800 font-bold block text-center mt-0.5">${b.barcode}</span>
             </div>
           </td>
           <td class="py-3 px-4 font-bold text-slate-900">
             <div>${b.judul}</div>
-            <div class="mt-1 flex items-center gap-2">
-              <button onclick="downloadBukuEbook('${b.id}')" class="px-2 py-0.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 rounded text-[10px] font-semibold flex items-center gap-1 shadow-sm transition">
-                <i class="fa-solid fa-file-arrow-down text-red-600"></i> Unduh E-Book (PDF)
-              </button>
-              ${b.fileEbook ? `<span class="text-[9px] text-slate-400 font-normal">(${b.fileEbook})</span>` : ''}
-            </div>
+            ${b.fileEbook ? `<span class="inline-flex items-center gap-1 text-[10px] text-teal-700 font-medium mt-0.5"><i class="fa-solid fa-file-pdf text-red-600"></i> ${b.fileEbook}</span>` : ''}
           </td>
           <td class="py-3 px-4 text-slate-600">${b.pengarang} - ${b.penerbit}</td>
           <td class="py-3 px-4"><span class="bg-teal-50 text-hijau-800 border border-teal-200 px-2 py-0.5 rounded text-[10px] font-bold">${b.kategori}</span></td>
@@ -4607,6 +4546,59 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
     }
 
     // RIWAYAT PRESENSI TABEL
+    
+    function editLogPresensi(absId) {
+      const a = DB.absensi.find(item => item.id === absId);
+      if (!a) return;
+      const newStatus = prompt("Ubah status kehadiran (HADIR / TERLAMBAT / IZIN / SAKIT):", a.status);
+      if (!newStatus) return;
+      const st = newStatus.trim().toUpperCase();
+      if (["HADIR", "TERLAMBAT", "IZIN", "SAKIT"].includes(st)) {
+        a.status = st;
+        const ket = prompt("Ubah keterangan / catatan:", a.keterangan || "");
+        if (ket !== null) a.keterangan = ket.trim();
+        persistDatabase();
+        renderRiwayatTable();
+        updateDashboardMetrics();
+        showToast("Data riwayat presensi berhasil diperbarui.");
+      } else {
+        showToast("Status tidak valid. Gunakan HADIR, TERLAMBAT, IZIN, atau SAKIT.", "warning");
+      }
+    }
+
+    function hapusLogPresensi(absId) {
+      if (confirm("Hapus catatan riwayat presensi ini?")) {
+        DB.absensi = DB.absensi.filter(item => item.id !== absId);
+        persistDatabase();
+        renderRiwayatTable();
+        updateDashboardMetrics();
+        showToast("Catatan presensi berhasil dihapus.");
+      }
+    }
+
+    function editLogPustaka(pId) {
+      const p = DB.peminjaman.find(item => item.id === pId);
+      if (!p) return;
+      const newStatus = prompt("Ubah status transaksi pustaka (DIPINJAM / KEMBALI):", p.status);
+      if (newStatus && ["DIPINJAM", "KEMBALI"].includes(newStatus.trim().toUpperCase())) {
+        p.status = newStatus.trim().toUpperCase();
+        persistDatabase();
+        renderRiwayatPerpusTable();
+        renderPeminjamanTable();
+        showToast("Status log perpustakaan berhasil diperbarui.");
+      }
+    }
+
+    function deleteLogPustaka(pId) {
+      if (confirm("Hapus catatan log perpustakaan ini?")) {
+        DB.peminjaman = DB.peminjaman.filter(item => item.id !== pId);
+        persistDatabase();
+        renderRiwayatPerpusTable();
+        renderPeminjamanTable();
+        showToast("Log perpustakaan berhasil dihapus.");
+      }
+    }
+    
     function renderRiwayatTable() {
       const filterDate = document.getElementById("filterRiwayatDate")?.value;
       const filterStatus = document.getElementById("filterRiwayatStatus")?.value || "ALL";
@@ -4647,9 +4639,10 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
             <td class="py-3 px-4 text-slate-600 max-w-xs truncate">${abs.keterangan || "-"}</td>
             <td class="py-3 px-4 text-slate-500">${abs.petugas || "Tata Usaha"}</td>
             <td class="py-3 px-4 text-center">
-              <button onclick="hapusLogPresensi('${abs.id}')" class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition" title="Hapus Riwayat">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
+              <div class="flex items-center justify-center gap-1.5">
+                <button onclick="editLogPresensi('${abs.id}')" class="p-1.5 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition" title="Edit Presensi"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button onclick="hapusLogPresensi('${abs.id}')" class="p-1.5 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition" title="Hapus Presensi"><i class="fa-solid fa-trash-can"></i></button>
+              </div>
             </td>
           </tr>
         `;
@@ -4665,9 +4658,33 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       document.getElementById("modalManualAbsensi").classList.add("hidden");
     }
 
-    // PUSAT LAPORAN RESMI
+    // PUSAT LAPORAN RESMI (DROPDOWN KELAS & SANTRI DINAMIS)
+    function populateSiswaLaporanDropdown(selectedKelasId = "ALL") {
+      const selSiswaLap = document.getElementById("filterSiswaLaporan");
+      if (!selSiswaLap) return;
+      const prevVal = selSiswaLap.value || "ALL";
+      const candidates = selectedKelasId === "ALL"
+        ? DB.siswa
+        : DB.siswa.filter(s => s.kelasId === selectedKelasId);
+
+      selSiswaLap.innerHTML = '<option value="ALL">Semua Santri / Siswa</option>' +
+        candidates.map(s => `<option value="${s.id}">${s.nama} (${s.nis})</option>`).join("");
+
+      if (candidates.some(s => s.id === prevVal)) {
+        selSiswaLap.value = prevVal;
+      } else {
+        selSiswaLap.value = "ALL";
+      }
+    }
+
+    function onKelasLaporanChange() {
+      const selKelasLap = document.getElementById("filterKelasLaporan");
+      const kelasId = selKelasLap ? selKelasLap.value : "ALL";
+      populateSiswaLaporanDropdown(kelasId);
+      renderOfficialReport();
+    }
+
     function renderOfficialReport() {
-      // Populate filter kelas dropdown jika belum
       const selKelasLap = document.getElementById("filterKelasLaporan");
       if (selKelasLap && selKelasLap.options.length <= 1) {
         selKelasLap.innerHTML = '<option value="ALL">Semua Kelas / Rombel</option>' + 
@@ -4675,14 +4692,18 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       }
 
       const selectedKelasId = selKelasLap ? selKelasLap.value : "ALL";
+      populateSiswaLaporanDropdown(selectedKelasId);
+
+      const selSiswaLap = document.getElementById("filterSiswaLaporan");
+      const selectedSiswaId = selSiswaLap ? selSiswaLap.value : "ALL";
+
       const labelKelas = document.getElementById("repKelasFilterLabel");
       if (labelKelas) {
-        if (selectedKelasId === "ALL") {
-          labelKelas.innerText = "Semua Kelas";
-        } else {
-          const kObj = DB.kelas.find(k => k.id === selectedKelasId);
-          labelKelas.innerText = kObj ? kObj.nama : "Semua Kelas";
-        }
+        const kObj = selectedKelasId === "ALL" ? null : DB.kelas.find(k => k.id === selectedKelasId);
+        const sObj = selectedSiswaId === "ALL" ? null : DB.siswa.find(s => s.id === selectedSiswaId);
+        const kText = kObj ? kObj.nama : "Semua Kelas";
+        const sText = sObj ? ` - Santri: ${sObj.nama} (${sObj.nis})` : " - Semua Santri";
+        labelKelas.innerText = kText + sText;
       }
 
       document.getElementById("repNpsn").innerText = DB.settings.npsn;
@@ -4698,9 +4719,13 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       if (!tbody) return;
       tbody.innerHTML = "";
 
-      const listSiswa = selectedKelasId === "ALL" 
+      let listSiswa = selectedKelasId === "ALL" 
         ? DB.siswa 
         : DB.siswa.filter(s => s.kelasId === selectedKelasId);
+
+      if (selectedSiswaId !== "ALL") {
+        listSiswa = listSiswa.filter(s => s.id === selectedSiswaId);
+      }
 
       if (listSiswa.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">Tidak ada data santri pada kelas yang dipilih.</td></tr>`;
@@ -4952,18 +4977,21 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
       const title = document.getElementById("modalPengumumanTitle");
       const form = document.getElementById("formSavePengumuman");
 
+      const today = new Date().toISOString().split('T')[0];
       if (id) {
         title.innerText = "Edit Pengumuman";
         const p = DB.pengumuman.find(item => item.id === id);
         document.getElementById("pengumumanEditId").value = p.id;
         document.getElementById("pengumumanJudul").value = p.judul;
         document.getElementById("pengumumanKategori").value = p.kategori;
-        document.getElementById("pengumumanTanggal").value = p.tanggal;
+        document.getElementById("pengumumanTanggalMulai").value = p.tanggalMulai || p.tanggal || today;
+        document.getElementById("pengumumanTanggalSelesai").value = p.tanggalSelesai || p.tanggal || today;
         document.getElementById("pengumumanIsi").value = p.isi;
       } else {
         title.innerText = "Buat Pengumuman Baru";
         form.reset();
-        document.getElementById("pengumumanTanggal").value = new Date().toISOString().split('T')[0];
+        document.getElementById("pengumumanTanggalMulai").value = today;
+        document.getElementById("pengumumanTanggalSelesai").value = today;
         document.getElementById("pengumumanEditId").value = "";
       }
       modal.classList.remove("hidden");
@@ -5376,7 +5404,7 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
             if (g) {
               Object.assign(g, { nip, nama, jk, mapel, jabatan, telp });
               if (foto) g.foto = foto;
-              showToast("Data dewan guru berhasil diperbarui.");
+              showToast("Data tenaga pendidik dan tenaga kependidikan berhasil diperbarui.");
             }
           } else {
             DB.guru.unshift({
@@ -5484,17 +5512,19 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
           const editId = document.getElementById("pengumumanEditId").value;
           const judul = document.getElementById("pengumumanJudul").value.trim();
           const kategori = document.getElementById("pengumumanKategori").value;
-          const tanggal = document.getElementById("pengumumanTanggal").value;
+          const tglMulai = document.getElementById("pengumumanTanggalMulai").value;
+          const tglSelesai = document.getElementById("pengumumanTanggalSelesai").value;
+          const rentangTgl = tglMulai === tglSelesai ? tglMulai : `${tglMulai} s.d. ${tglSelesai}`;
           const isi = document.getElementById("pengumumanIsi").value.trim();
 
           if (editId) {
             const p = DB.pengumuman.find(item => item.id === editId);
             if (p) {
-              Object.assign(p, { judul, kategori, tanggal, isi });
+              Object.assign(p, { judul, kategori, tanggal: rentangTgl, tanggalMulai: tglMulai, tanggalSelesai: tglSelesai, isi });
               showToast("Pengumuman diperbarui.");
             }
           } else {
-            DB.pengumuman.unshift({ id: `P-${Date.now()}`, judul, kategori, tanggal, isi });
+            DB.pengumuman.unshift({ id: `P-${Date.now()}`, judul, kategori, tanggal: rentangTgl, tanggalMulai: tglMulai, tanggalSelesai: tglSelesai, isi });
             showToast("Pengumuman dipublikasikan.");
           }
           persistDatabase();
@@ -5519,11 +5549,11 @@ Hak Cipta dilindungi undang-undang. Dokumen digital ini diperuntukkan khusus bag
             const k = DB.kelas.find(item => item.id === editId);
             if (k) {
               Object.assign(k, { tingkat, jurusanId, nama, waliKelas });
-              showToast("Rombel diperbarui.");
+              showToast("Kelas diperbarui.");
             }
           } else {
             DB.kelas.unshift({ id: `K-${Date.now()}`, tingkat, jurusanId, nama, waliKelas });
-            showToast("Rombel baru disimpan.");
+            showToast("Kelas baru disimpan.");
           }
           persistDatabase();
           closeModalKelas();
