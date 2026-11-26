@@ -325,11 +325,11 @@
                 </button>
                 <button onclick="navigateTo('kartu')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm transition border border-white/20">
                   <i class="fa-solid fa-id-card"></i>
-                  <span>Cetak Kartu Santri & Barcode</span>
+                  <span>Cetak Kartu Santri</span>
                 </button>
                 <button onclick="navigateTo('perpus')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm transition border border-white/20">
                   <i class="fa-solid fa-book"></i>
-                  <span>Perpustakaan Barcode</span>
+                  <span>Perpustakaan Digital</span>
                 </button>
               </div>
             </div>
@@ -442,7 +442,7 @@
             <div>
               <h2 class="text-xl sm:text-2xl font-bold">Terminal Pemindai Barcode</h2>
               <p class="text-xs text-teal-200 mt-1">
-                Pilih mode kerja scanner: Validasi Presensi Siswa atau Pustaka Digital.
+                 Presensi Siswa atau Pustaka Digital SMK Darul Hijrah Panceng.
               </p>
               <div class="mt-2.5 inline-flex items-center gap-3 bg-hijau-900/90 border border-amber-400/50 rounded-xl px-3 py-1.5 shadow-inner">
                 <span class="text-[10px] text-amber-300 font-bold uppercase tracking-wider"><i class="fa-solid fa-clock mr-1"></i> WAKTU:</span>
@@ -471,6 +471,7 @@
                     <h3 class="text-sm font-bold text-slate-900" id="scanTitleMode">Kamera Scanner Presensi Santri</h3>
                   </div>
                   <div class="flex items-center gap-2">
+                    <input type="file" id="inputScanBarcodeFile" accept="image/*" class="hidden" onchange="handleScanBarcodeFromFile(event)">
                     <button id="btnStartCamera" onclick="startCamera()" class="px-3 py-1.5 bg-hijau-800 hover:bg-hijau-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
                       <i class="fa-solid fa-video"></i>
                       <span>Aktifkan Kamera</span>
@@ -566,7 +567,7 @@
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Data Induk Santri</h2>
               <p class="text-xs text-slate-500">
-                Pengelolaan biodata santri, kelas, pas foto, dan kode barcode unik berbasis Nomor Induk Santri (NIS).
+                Pengelolaan biodata santri, kelas, pas foto, dan barcode.
               </p>
             </div>
             <button onclick="openModalSiswa()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
@@ -622,7 +623,7 @@
         <section id="viewKartu" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Kartu Santri & Barcode</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Kartu Santri</h2>
               <p class="text-xs text-slate-500">
                 Barcode unik beresolusi tajam, terintegrasi presensi & perpustakaan, dan dapat diunduh JPG/PNG.
               </p>
@@ -1255,7 +1256,7 @@
                 REKAPITULASI PRESENSI SANTRI
               </h3>
               <p class="text-xs text-slate-600 mt-1">
-                Kelas: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2027/2028</span> (<span id="repSemester">Ganjil</span>) - Dicetak: <span id="repTglCetak">2027-11-23</span>
+                Kelas: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2027/2028</span> (<span id="repSemester">Ganjil</span>
               </p>
             </div>
 
@@ -1324,6 +1325,7 @@
               <span>Tambah Guru / Tendik</span>
             </button>
           </div>
+          <input type="file" id="inputUploadFotoGuruDirect" accept="image/*" class="hidden" onchange="handleDirectGuruPhotoUpload(event)">
           <div id="guruGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- Populated via JS -->
           </div>
@@ -1350,12 +1352,12 @@
         <section id="viewJurusan" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Kompetensi Keahlian (Jurusan)</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Kejuruan</h2>
               <p class="text-xs text-slate-500">Program keahlian kejuruan SMK Darul Hijrah Panceng.</p>
             </div>
             <button onclick="openModalJurusan()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-plus"></i>
-              <span>Tambah Jurusan Baru</span>
+              <span>Tambah Kejuruan Baru</span>
             </button>
           </div>
           <div id="jurusanGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1429,7 +1431,7 @@
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Pengelolaan Nilai Santri</h2>
-              <p class="text-xs text-slate-500">Rekapitulasi Tugas (30%), UTS (30%), dan UAS (40%).</p>
+              <p class="text-xs text-slate-500">Rekapitulasi Tugas, UTS, dan UAS.</p>
             </div>
             <button onclick="openModalNilai()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-plus"></i>
@@ -1442,9 +1444,9 @@
                 <tr>
                   <th class="py-3 px-4 font-semibold">Santri</th>
                   <th class="py-3 px-4 font-semibold">Mata Pelajaran</th>
-                  <th class="py-3 px-4 font-semibold text-center">Tugas (30%)</th>
-                  <th class="py-3 px-4 font-semibold text-center">UTS (30%)</th>
-                  <th class="py-3 px-4 font-semibold text-center">UAS (40%)</th>
+                  <th class="py-3 px-4 font-semibold text-center">Tugas</th>
+                  <th class="py-3 px-4 font-semibold text-center">UTS</th>
+                  <th class="py-3 px-4 font-semibold text-center">UAS</th>
                   <th class="py-3 px-4 font-semibold text-center">Nilai Akhir</th>
                   <th class="py-3 px-4 font-semibold text-center">Predikat</th>
                   <th class="py-3 px-4 font-semibold text-center">Aksi</th>
@@ -2244,15 +2246,15 @@
 
         <div class="grid grid-cols-3 gap-2">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Tugas (30%)</label>
+            <label class="block font-bold text-slate-700 mb-1">Tugas</label>
             <input type="number" id="nilaiTugas" required min="0" max="100" placeholder="0-100" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-mono">
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">UTS (30%)</label>
+            <label class="block font-bold text-slate-700 mb-1">UTS</label>
             <input type="number" id="nilaiUts" required min="0" max="100" placeholder="0-100" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-mono">
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">UAS (40%)</label>
+            <label class="block font-bold text-slate-700 mb-1">UAS</label>
             <input type="number" id="nilaiUas" required min="0" max="100" placeholder="0-100" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-mono">
           </div>
         </div>
@@ -2362,7 +2364,7 @@
   <div id="modalJurusan" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
       <div class="flex items-center justify-between pb-3 border-b mb-4">
-        <h3 id="modalJurusanTitle" class="text-base font-bold text-slate-900">Tambah Kompetensi Keahlian</h3>
+        <h3 id="modalJurusanTitle" class="text-base font-bold text-slate-900">Tambah Kejuruan</h3>
         <button onclick="closeModalJurusan()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
 
@@ -2564,12 +2566,22 @@
 
     let DB = loadDatabase();
 
+    let _firebaseSyncDebounceTimer = null;
     function persistDatabase() {
       DB._lastModified = Date.now();
       DB._isInitializedByUser = true;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      // 1. Simpan ke localStorage seketika (Zero latency update)
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      } catch (err) {
+        console.warn("Gagal simpan ke localStorage:", err);
+      }
+      // 2. Debounce background cloud upload agar tidak membebani jaringan dan tidak lag
       if (window.firebaseSync && typeof window.firebaseSync.save === "function") {
-        window.firebaseSync.save(DB);
+        if (_firebaseSyncDebounceTimer) clearTimeout(_firebaseSyncDebounceTimer);
+        _firebaseSyncDebounceTimer = setTimeout(() => {
+          window.firebaseSync.save(DB);
+        }, 400);
       }
     }
 
@@ -2888,15 +2900,49 @@
     }
 
     function previewUploadFotoGuru(e) {
-      const file = e.target.files[0];
+      const file = e.target.files && e.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          document.getElementById("guruFotoData").value = event.target.result;
-          document.getElementById("previewFotoGuru").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
+          if (typeof bukaModalResizeGambar === "function") {
+            bukaModalResizeGambar(event.target.result, (imgResized) => {
+              document.getElementById("guruFotoData").value = imgResized;
+              document.getElementById("previewFotoGuru").innerHTML = `<img src="${imgResized}" class="w-full h-full object-cover">`;
+            });
+          } else {
+            document.getElementById("guruFotoData").value = event.target.result;
+            document.getElementById("previewFotoGuru").innerHTML = `<img src="${event.target.result}" class="w-full h-full object-cover">`;
+          }
         };
         reader.readAsDataURL(file);
+        e.target.value = "";
       }
+    }
+
+    let currentEditingGuruAvatarId = null;
+    function gantiFotoGuruLangsung(guruId) {
+      currentEditingGuruAvatarId = guruId;
+      const inp = document.getElementById("inputUploadFotoGuruDirect");
+      if (inp) inp.click();
+    }
+
+    function handleDirectGuruPhotoUpload(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !currentEditingGuruAvatarId) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        bukaModalResizeGambar(event.target.result, (imgResized) => {
+          const g = DB.guru.find(item => item.id === currentEditingGuruAvatarId);
+          if (g) {
+            g.foto = imgResized;
+            persistDatabase();
+            renderGuruGrid();
+            showToast(`Foto profil ${g.nama} berhasil diperbarui!`);
+          }
+        });
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
     }
 
     // TOGGLE MODE SCAN (PRESENSI VS PERPUSTAKAAN)
@@ -2929,22 +2975,76 @@
     }
 
     // EKSEKUSI PEMINDAIAN SESUAI MODE
+    function handleScanBarcodeFromFile(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      showToast("Menganalisis gambar barcode...", "info");
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const cvs = document.createElement("canvas");
+          cvs.width = img.width;
+          cvs.height = img.height;
+          const cctx = cvs.getContext("2d");
+          cctx.drawImage(img, 0, 0);
+          const imgData = cctx.getImageData(0, 0, cvs.width, cvs.height);
+          
+          let decoded = null;
+          if (typeof jsQR !== "undefined") {
+            const qr = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+            if (qr && qr.data) decoded = qr.data;
+          }
+          if (decoded) {
+            showToast("Barcode berhasil dipindai!");
+            verifyScan(decoded);
+          } else {
+            showToast("Tidak dapat mendeteksi barcode dari gambar. Pastikan gambar jelas.", "warning");
+          }
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    }
+
     function verifyScan(tokenInput) {
-      const clean = (tokenInput || "").trim();
+      let clean = (tokenInput || "").trim();
       if (!clean) return;
+      // Bersihkan jika membaca prefix URL atau teks ekstra
+      clean = clean.replace(/^(https?:\/\/[^\/]+\/)/i, '').trim();
+
+      // SMART AUTO-DETECT: Jika format barcode mengindikasikan buku perpustakaan (BK-...), prioritaskan perpus
+      const isBookCode = clean.toUpperCase().startsWith("BK-") || DB.buku.some(b => b.barcode.toUpperCase() === clean.toUpperCase());
+      const isStudentMatch = DB.siswa.some(s => 
+        s.qrToken.toLowerCase() === clean.toLowerCase() || 
+        s.nis.toLowerCase() === clean.toLowerCase() ||
+        clean.toLowerCase().includes(s.nis.toLowerCase()) ||
+        s.qrToken.toLowerCase().includes(clean.toLowerCase())
+      );
 
       if (currentScanMode === "PRESENSI") {
+        if (isBookCode && !isStudentMatch) {
+          // Pengguna sedang memindai barcode buku, alihkan otomatis ke penanganan perpustakaan
+          processLibraryScan(clean);
+          return;
+        }
         processAttendanceScan(clean);
       } else {
+        // Mode Perpustakaan
         processLibraryScan(clean);
       }
     }
 
     function processAttendanceScan(clean) {
-      const student = DB.siswa.find(s =>
-        s.qrToken.toLowerCase() === clean.toLowerCase() ||
-        s.nis === clean
-      );
+      const cleanLower = clean.toLowerCase();
+      // Pencarian fleksibel: token persis, nis persis, atau substring nis di dalam token
+      const student = DB.siswa.find(s => {
+        if (!s) return false;
+        const sToken = (s.qrToken || "").toLowerCase();
+        const sNis = (s.nis || "").toLowerCase();
+        return sToken === cleanLower || sNis === cleanLower || (sNis && cleanLower.includes(sNis)) || (sToken && cleanLower.includes(sToken));
+      });
 
       const container = document.getElementById("scanResultContainer");
       const now = new Date();
@@ -3030,8 +3130,14 @@
     // SIRKULASI CEPAT PERPUSTAKAAN DENGAN BARCODE
     function processLibraryScan(clean) {
       const container = document.getElementById("scanResultContainer");
-      const book = DB.buku.find(b => b.barcode.toLowerCase() === clean.toLowerCase());
-      const student = DB.siswa.find(s => s.qrToken.toLowerCase() === clean.toLowerCase() || s.nis === clean);
+      const cleanLower = clean.toLowerCase();
+      const book = DB.buku.find(b => (b.barcode || "").toLowerCase() === cleanLower || (b.barcode || "").toLowerCase().includes(cleanLower));
+      const student = DB.siswa.find(s => {
+        if (!s) return false;
+        const sToken = (s.qrToken || "").toLowerCase();
+        const sNis = (s.nis || "").toLowerCase();
+        return sToken === cleanLower || sNis === cleanLower || (sNis && cleanLower.includes(sNis));
+      });
 
       if (book) {
         const activeLoan = DB.peminjaman.find(p => p.bukuId === book.id && p.status === "DIPINJAM");
@@ -4016,8 +4122,9 @@
       grid.innerHTML = DB.guru.map(g => `
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div class="flex items-start gap-3">
-            <div class="w-12 h-14 rounded-lg bg-hijau-950 text-amber-300 font-bold flex items-center justify-center text-sm shrink-0 overflow-hidden">
+            <div class="relative group cursor-pointer w-12 h-14 rounded-lg bg-hijau-950 text-amber-300 font-bold flex items-center justify-center text-sm shrink-0 overflow-hidden ring-1 ring-amber-400/40" onclick="gantiFotoGuruLangsung('${g.id}')" title="Klik untuk ubah foto guru">
               ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : g.nama.charAt(0)}
+              <span class="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center text-white text-[10px] opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-camera"></i></span>
             </div>
             <div class="overflow-hidden leading-snug flex-1">
               <h4 class="font-bold text-xs text-slate-900 truncate">${g.nama}</h4>
