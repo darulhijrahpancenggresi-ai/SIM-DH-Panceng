@@ -4404,35 +4404,56 @@
        const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "") ||
           (navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
 
-        const constraintsList = isMobileDevice
-          ? [
-              {
-                video: {
-                  facingMode: { exact: "environment" },
-                  width: { ideal: 960 },
-                  height: { ideal: 540 },
-                  advanced: [{ focusMode: "continuous" }]
-                },
-                audio: false
-              },
-              {
-                video: { facingMode: { ideal: "environment" }, width: { ideal: 960 }, height: { ideal: 540 } },
-                audio: false
-              },
-              { video: { facingMode: "environment" }, audio: false }
-            ]
-          : [
-              { video: { width: { ideal: 960 }, height: { ideal: 540 } }, audio: false },
-              { video: true, audio: false }
-            ];
+        const tryOpenStream = async (videoConstraint) => {
+          return await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false });
+        };
 
         let lastCameraErr = null;
-        for (const constraint of constraintsList) {
+        if (isMobileDevice) {
+          // 1. Coba ambil daftar kamera untuk menarget kamera belakang spesifik
+          let backDeviceIds = [];
           try {
-            stream = await navigator.mediaDevices.getUserMedia(constraint);
-            if (stream) break;
-          } catch (errAttempt) {
-            lastCameraErr = errAttempt;
+            if (typeof navigator.mediaDevices.enumerateDevices === "function") {
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const videoDevices = devices.filter(d => d.kind === "videoinput");
+              backDeviceIds = videoDevices
+                .filter(d => /back|rear|environment|belakang|0\b/i.test(d.label || ""))
+                .map(d => d.deviceId)
+                .filter(Boolean);
+              // Jika label belum terisi (karena belum pernah diberi izin), coba device terakhir (sering kamera belakang)
+              if (backDeviceIds.length === 0 && videoDevices.length > 1) {
+                backDeviceIds = [videoDevices[videoDevices.length - 1].deviceId].filter(Boolean);
+              }
+            }
+          } catch (_) {}
+
+          const mobileCandidates = [
+            ...backDeviceIds.map(devId => ({ deviceId: { exact: devId }, width: { ideal: 960 }, height: { ideal: 540 } })),
+            { facingMode: { ideal: "environment" }, width: { ideal: 960 }, height: { ideal: 540 } },
+            { facingMode: "environment" }
+          ];
+
+          for (const vc of mobileCandidates) {
+            try {
+              stream = await tryOpenStream(vc);
+              if (stream) break;
+            } catch (errAttempt) {
+              lastCameraErr = errAttempt;
+            }
+          }
+        } else {
+          // Komputer / Laptop: pakai kamera/webcam yang tersedia
+          const desktopCandidates = [
+            { width: { ideal: 960 }, height: { ideal: 540 } },
+            true
+          ];
+          for (const vc of desktopCandidates) {
+            try {
+              stream = await tryOpenStream(vc);
+              if (stream) break;
+            } catch (errAttempt) {
+              lastCameraErr = errAttempt;
+            }
           }
         }
 
@@ -4458,7 +4479,8 @@
         } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
           detailPesan = "Sensor kamera tidak ditemukan pada perangkat ini.";
         } else if (errName === "NotReadableError" || errName === "TrackStartError") {
-          detailPesan = "Kamera sedang digunakan aplikasi lain. Tutup aplikasi kamera lain lalu coba lagi.";
+          detailPesan = "Kamera belakang gagal dikunci oleh sistem/browser (kemungkinan sedang dipakai proses lain atau bermasalah di driver HP). Coba tutup tab/aplikasi kamera lain atau restart HP.";
+        }
         } else if (!window.isSecureContext) {
           detailPesan = "Kamera diblokir karena bukan koneksi HTTPS/localhost. Gunakan HTTPS atau Unggah File Barcode / input manual di bawah.";
         } else {
