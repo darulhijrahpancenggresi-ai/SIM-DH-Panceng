@@ -325,7 +325,7 @@
                 </button>
                 <button onclick="navigateTo('kartu')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm transition border border-white/20">
                   <i class="fa-solid fa-id-card"></i>
-                  <span>Cetak Kartu Santri & Barcode</span>
+                  <span>Cetak Kartu Santri</span>
                 </button>
                 <button onclick="navigateTo('perpus')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm transition border border-white/20">
                   <i class="fa-solid fa-book"></i>
@@ -442,7 +442,7 @@
             <div>
               <h2 class="text-xl sm:text-2xl font-bold">Terminal Pemindai Barcode</h2>
               <p class="text-xs text-teal-200 mt-1">
-                Pilih mode kerja scanner: Validasi Presensi Siswa atau Pustaka Digital.
+                Presensi Siswa atau Perpustakaan Digital.
               </p>
               <div class="mt-2.5 inline-flex items-center gap-3 bg-hijau-900/90 border border-amber-400/50 rounded-xl px-3 py-1.5 shadow-inner">
                 <span class="text-[10px] text-amber-300 font-bold uppercase tracking-wider"><i class="fa-solid fa-clock mr-1"></i> WAKTU:</span>
@@ -627,7 +627,7 @@
         <section id="viewKartu" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Kartu Santri & Barcode</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Kartu Santri</h2>
               <p class="text-xs text-slate-500">
                 Barcode unik beresolusi tajam, terintegrasi presensi & perpustakaan, dan dapat diunduh JPG/PNG.
               </p>
@@ -1204,31 +1204,39 @@
           </div>
         </section>
 
-        <!-- 9. PUSAT LAPORAN RESMI & UNDUH PDF -->
-        <section id="viewLaporan" class="hidden space-y-6">
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="shrink-0">
-              <h2 class="text-xl font-bold text-hijau-950">Pusat Laporan & Rekapitulasi</h2>
-              <p class="text-xs text-slate-500">
-              </p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2.5 justify-start lg:justify-end">
-              <select id="filterKelasLaporan" onchange="onKelasLaporanChange()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
-                <option value="ALL">Semua Kelas</option>
-              </select>
-              <select id="filterSiswaLaporan" onchange="renderOfficialReport()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
-                <option value="ALL">Semua Santri</option>
-              </select>
-              <button onclick="unduhLaporanPDF()" class="bg-amber-400 hover:bg-amber-500 text-hijau-950 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
-                <i class="fa-solid fa-file-pdf text-red-700"></i>
-                <span>Unduh Laporan PDF</span>
-              </button>
-              <button onclick="window.print()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
-                <i class="fa-solid fa-print"></i>
-                <span>Cetak Lembar Kerja</span>
-              </button>
-            </div>
-          </div>
+       <!-- KODE BARU (SUDAH RAPI, SEJAJAR & TIDAK BERTUMPUK) -->
+<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+  <!-- Judul Halaman -->
+  <div class="flex items-center gap-2 shrink-0">
+    <span class="w-2.5 h-6 rounded-full bg-hijau-800"></span>
+    <h2 class="text-lg sm:text-xl font-bold text-hijau-950 tracking-tight">Pusat Laporan &amp; Rekapitulasi</h2>
+  </div>
+
+  <!-- Area Kontrol (Filter & Tombol) -->
+  <div class="flex flex-wrap items-center gap-2.5 justify-start xl:justify-end">
+    <!-- Grup Filter Dropdown -->
+    <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+      <select id="filterKelasLaporan" onchange="onKelasLaporanChange()" class="h-10 text-xs px-3.5 border border-slate-300 rounded-xl font-bold bg-slate-50 text-hijau-950 focus:outline-none focus:ring-2 focus:ring-hijau-800/20 shadow-sm transition">
+        <option value="ALL">Semua Kelas</option>
+      </select>
+      <select id="filterSiswaLaporan" onchange="renderOfficialReport()" class="h-10 text-xs px-3.5 border border-slate-300 rounded-xl font-bold bg-slate-50 text-hijau-950 focus:outline-none focus:ring-2 focus:ring-hijau-800/20 shadow-sm transition">
+        <option value="ALL">Semua Santri</option>
+      </select>
+    </div>
+
+    <!-- Grup Tombol Aksi (Terkunci Berdampingan) -->
+    <div class="flex items-center gap-2 shrink-0">
+      <button onclick="unduhLaporanPDF()" class="h-10 bg-amber-400 hover:bg-amber-500 text-hijau-950 font-bold text-xs px-4 rounded-xl flex items-center gap-2 shadow-sm hover:shadow transition shrink-0 whitespace-nowrap">
+        <i class="fa-solid fa-file-pdf text-red-700 text-sm"></i>
+        <span>Unduh Laporan PDF</span>
+      </button>
+      <button onclick="window.print()" class="h-10 bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 rounded-xl flex items-center gap-2 shadow-sm hover:shadow transition shrink-0 whitespace-nowrap">
+        <i class="fa-solid fa-print text-sm"></i>
+        <span>Cetak Lembar Kerja</span>
+      </button>
+    </div>
+  </div>
+</div>
 
           <!-- Printable Sheet Frame -->
           <div id="printableArea" class="bg-white rounded-2xl border border-slate-300 shadow-lg p-8 max-w-4xl mx-auto">
@@ -1260,7 +1268,7 @@
                 REKAPITULASI PRESENSI SANTRI
               </h3>
               <p class="text-xs text-slate-600 mt-1">
-                Kelas: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2027/2028</span> (<span id="repSemester">Ganjil</span>) - Dicetak: <span id="repTglCetak">2027-11-23</span>
+                Kelas: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2027/2028</span> (<span id="repSemester">Ganjil</span>)</span>
               </p>
             </div>
 
@@ -1356,7 +1364,7 @@
         <section id="viewJurusan" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Kompetensi Keahlian (Jurusan)</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Kejuruan</h2>
               <p class="text-xs text-slate-500">Program keahlian kejuruan SMK Darul Hijrah Panceng.</p>
             </div>
             <button onclick="openModalJurusan()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
@@ -2368,7 +2376,7 @@
   <div id="modalJurusan" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
       <div class="flex items-center justify-between pb-3 border-b mb-4">
-        <h3 id="modalJurusanTitle" class="text-base font-bold text-slate-900">Tambah Kompetensi Keahlian</h3>
+        <h3 id="modalJurusanTitle" class="text-base font-bold text-slate-900">Tambah Kejuruan</h3>
         <button onclick="closeModalJurusan()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
 
@@ -3528,7 +3536,7 @@
         3. Sumber Belajar: Modul Ajar Guru, E-Book Perpustakaan, Video Tutorial Industri, LMS Kemdikbudristek.</p>
 
         <h3>E. TARGET PESERTA DIDIK</h3>
-        <p>Peserta didik reguler dan santri pondok pesantren (mampu memahami materi kejuruan dan mempraktikkan jobsheet secara mandiri).</p>
+        <p>Peserta didik reguler dan santri pondok pesantren Hidayatullah Panceng(mampu memahami materi kejuruan dan mempraktikkan jobsheet secara mandiri).</p>
 
         <h3>F. MODEL PEMBELAJARAN</h3>
         <p>Project-Based Learning (PjBL) terpadu Discovery Learning dengan pendekatan Pembelajaran Mendalam (Deep Learning).</p>
@@ -3794,7 +3802,7 @@
           { no: 4, nama: "Hadits", kkm: 75, nilai: data.mapelTarikh },
           { no: 5, nama: "Manajemen Lembaga", kkm: 75, nilai: data.mapelQuran },
           { no: 6, nama: "tafsir", kkm: 75, nilai: data.mapelTilawati },
-          { no: 7, nama: "Kompetensi Kejuruan Terpadu", kkm: 75, nilai: data.mapelKejuruan }
+          { no: 7, nama: "Kejuruan", kkm: 75, nilai: data.mapelKejuruan }
         ];
 
         let totalNilai = 0;
@@ -3900,7 +3908,7 @@
                 <h5 class="font-bold text-xs text-white truncate">${s.nama}</h5>
                 <div class="text-[11px] text-amber-300 font-mono font-bold">NIS: ${s.nis}</div>
                 <div class="text-[10px] text-teal-200 font-medium">${kelas ? kelas.nama : "-"} - ${jurusan ? jurusan.singkatan : "-"}</div>
-                <div class="text-[9px] text-slate-300">Santri Pondok Pesantren</div>
+                <div class="text-[9px] text-slate-300">Santri Pondok Pesantren Hidayatullah Panceng</div>
               </div>
             </div>
 
@@ -3927,7 +3935,7 @@
               <div class="flex justify-between items-center text-[9px] text-teal-200 mt-1">
                 <span>Berlaku Selama Menjadi Santri</span>
                 <button onclick="window.print()" class="text-amber-300 hover:text-white font-bold flex items-center gap-1">
-                  <i class="fa-solid fa-print"></i> Cetak Kartu
+                  <i class="fa-solid fa-print"></i> Cetak Kartu Santri
                 </button>
               </div>
             </div>
@@ -4208,7 +4216,7 @@
       { id: "laporan", label: "Pusat Laporan", icon: "fa-solid fa-file-invoice" },
       { id: "guru", label: "Tenaga Pendidik & Tenaga Kependidikan", icon: "fa-solid fa-user-tie" },
       { id: "kelas", label: "Kelas", icon: "fa-solid fa-layer-group" },
-      { id: "jurusan", label: "Kompetensi Keahlian", icon: "fa-solid fa-network-wired" },
+      { id: "jurusan", label: "Kejuruan", icon: "fa-solid fa-network-wired" },
       { id: "mapel", label: "Mata Pelajaran", icon: "fa-solid fa-book-open" },
       { id: "jadwal", label: "Jadwal Pelajaran", icon: "fa-solid fa-calendar-days" },
       { id: "nilai", label: "Pengelolaan Nilai", icon: "fa-solid fa-graduation-cap" },
