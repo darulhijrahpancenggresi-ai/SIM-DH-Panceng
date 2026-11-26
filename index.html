@@ -4403,11 +4403,14 @@
         }
         try {
           stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
+        } catch (errExact) {
+          stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
             audio: false
           });
-        } catch (errEnv) {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         }
         cameraStream = stream;
         video.srcObject = stream;
