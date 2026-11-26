@@ -325,11 +325,11 @@
                 </button>
                 <button onclick="navigateTo('kartu')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm transition border border-white/20">
                   <i class="fa-solid fa-id-card"></i>
-                  <span>Cetak Kartu Santri</span>
+                  <span>Cetak Kartu Santri & Barcode</span>
                 </button>
                 <button onclick="navigateTo('perpus')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-2 backdrop-blur-sm transition border border-white/20">
                   <i class="fa-solid fa-book"></i>
-                  <span>Perpustakaan Digital</span>
+                  <span>Perpustakaan Barcode</span>
                 </button>
               </div>
             </div>
@@ -442,7 +442,7 @@
             <div>
               <h2 class="text-xl sm:text-2xl font-bold">Terminal Pemindai Barcode</h2>
               <p class="text-xs text-teal-200 mt-1">
-                 Presensi Siswa atau Pustaka Digital SMK Darul Hijrah Panceng.
+                Pilih mode kerja scanner: Validasi Presensi Siswa atau Pustaka Digital.
               </p>
               <div class="mt-2.5 inline-flex items-center gap-3 bg-hijau-900/90 border border-amber-400/50 rounded-xl px-3 py-1.5 shadow-inner">
                 <span class="text-[10px] text-amber-300 font-bold uppercase tracking-wider"><i class="fa-solid fa-clock mr-1"></i> WAKTU:</span>
@@ -472,6 +472,10 @@
                   </div>
                   <div class="flex items-center gap-2">
                     <input type="file" id="inputScanBarcodeFile" accept="image/*" class="hidden" onchange="handleScanBarcodeFromFile(event)">
+                    <select id="selectCameraFacing" onchange="onCameraFacingChoiceChange()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-hijau-800" title="Pilih kamera depan atau belakang">
+                      <option value="environment">Kamera Belakang</option>
+                      <option value="user">Kamera Depan</option>
+                    </select>
                     <button id="btnStartCamera" onclick="startCamera()" class="px-3 py-1.5 bg-hijau-800 hover:bg-hijau-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
                       <i class="fa-solid fa-video"></i>
                       <span>Aktifkan Kamera</span>
@@ -567,7 +571,7 @@
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Data Induk Santri</h2>
               <p class="text-xs text-slate-500">
-                Pengelolaan biodata santri, kelas, pas foto, dan barcode.
+                Pengelolaan biodata santri, kelas, pas foto, dan kode barcode unik berbasis Nomor Induk Santri (NIS).
               </p>
             </div>
             <button onclick="openModalSiswa()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
@@ -623,7 +627,7 @@
         <section id="viewKartu" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Kartu Santri</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Kartu Santri & Barcode</h2>
               <p class="text-xs text-slate-500">
                 Barcode unik beresolusi tajam, terintegrasi presensi & perpustakaan, dan dapat diunduh JPG/PNG.
               </p>
@@ -1256,7 +1260,7 @@
                 REKAPITULASI PRESENSI SANTRI
               </h3>
               <p class="text-xs text-slate-600 mt-1">
-                Kelas: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2027/2028</span> (<span id="repSemester">Ganjil</span>
+                Kelas: <strong id="repKelasFilterLabel" class="text-hijau-950">Semua Kelas</strong> - Tahun Ajaran: <span id="repTahunAjaran">2027/2028</span> (<span id="repSemester">Ganjil</span>) - Dicetak: <span id="repTglCetak">2027-11-23</span>
               </p>
             </div>
 
@@ -1352,12 +1356,12 @@
         <section id="viewJurusan" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-xl font-bold text-hijau-950">Kejuruan</h2>
+              <h2 class="text-xl font-bold text-hijau-950">Kompetensi Keahlian (Jurusan)</h2>
               <p class="text-xs text-slate-500">Program keahlian kejuruan SMK Darul Hijrah Panceng.</p>
             </div>
             <button onclick="openModalJurusan()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-plus"></i>
-              <span>Tambah Kejuruan Baru</span>
+              <span>Tambah Jurusan Baru</span>
             </button>
           </div>
           <div id="jurusanGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1431,7 +1435,7 @@
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 class="text-xl font-bold text-hijau-950">Pengelolaan Nilai Santri</h2>
-              <p class="text-xs text-slate-500">Rekapitulasi Tugas, UTS, dan UAS.</p>
+              <p class="text-xs text-slate-500">Rekapitulasi Tugas (30%), UTS (30%), dan UAS (40%).</p>
             </div>
             <button onclick="openModalNilai()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
               <i class="fa-solid fa-plus"></i>
@@ -1444,9 +1448,9 @@
                 <tr>
                   <th class="py-3 px-4 font-semibold">Santri</th>
                   <th class="py-3 px-4 font-semibold">Mata Pelajaran</th>
-                  <th class="py-3 px-4 font-semibold text-center">Tugas</th>
-                  <th class="py-3 px-4 font-semibold text-center">UTS</th>
-                  <th class="py-3 px-4 font-semibold text-center">UAS</th>
+                  <th class="py-3 px-4 font-semibold text-center">Tugas (30%)</th>
+                  <th class="py-3 px-4 font-semibold text-center">UTS (30%)</th>
+                  <th class="py-3 px-4 font-semibold text-center">UAS (40%)</th>
                   <th class="py-3 px-4 font-semibold text-center">Nilai Akhir</th>
                   <th class="py-3 px-4 font-semibold text-center">Predikat</th>
                   <th class="py-3 px-4 font-semibold text-center">Aksi</th>
@@ -2246,15 +2250,15 @@
 
         <div class="grid grid-cols-3 gap-2">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Tugas</label>
+            <label class="block font-bold text-slate-700 mb-1">Tugas (30%)</label>
             <input type="number" id="nilaiTugas" required min="0" max="100" placeholder="0-100" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-mono">
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">UTS</label>
+            <label class="block font-bold text-slate-700 mb-1">UTS (30%)</label>
             <input type="number" id="nilaiUts" required min="0" max="100" placeholder="0-100" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-mono">
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">UAS</label>
+            <label class="block font-bold text-slate-700 mb-1">UAS (40%)</label>
             <input type="number" id="nilaiUas" required min="0" max="100" placeholder="0-100" class="w-full px-3 py-2 border rounded-lg focus:outline-none font-mono">
           </div>
         </div>
@@ -2364,7 +2368,7 @@
   <div id="modalJurusan" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
       <div class="flex items-center justify-between pb-3 border-b mb-4">
-        <h3 id="modalJurusanTitle" class="text-base font-bold text-slate-900">Tambah Kejuruan</h3>
+        <h3 id="modalJurusanTitle" class="text-base font-bold text-slate-900">Tambah Kompetensi Keahlian</h3>
         <button onclick="closeModalJurusan()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
 
@@ -2721,6 +2725,7 @@
           DB.operatorTU.foto = imgData;
           persistDatabase();
           renderAvatarTU();
+      syncCameraFacingSelectUI();
           showToast("Foto profil Tata Usaha berhasil terupdate!");
         };
 
@@ -4196,7 +4201,7 @@
       { id: "laporan", label: "Pusat Laporan", icon: "fa-solid fa-file-invoice" },
       { id: "guru", label: "Tenaga Pendidik & Tenaga Kependidikan", icon: "fa-solid fa-user-tie" },
       { id: "kelas", label: "Kelas", icon: "fa-solid fa-layer-group" },
-      { id: "jurusan", label: "Kejuruan", icon: "fa-solid fa-network-wired" },
+      { id: "jurusan", label: "Kompetensi Keahlian", icon: "fa-solid fa-network-wired" },
       { id: "mapel", label: "Mata Pelajaran", icon: "fa-solid fa-book-open" },
       { id: "jadwal", label: "Jadwal Pelajaran", icon: "fa-solid fa-calendar-days" },
       { id: "nilai", label: "Pengelolaan Nilai", icon: "fa-solid fa-graduation-cap" },
@@ -4384,6 +4389,33 @@
       }, 150);
     }
 
+    let preferredCameraFacing = null;
+
+    function detectMobileOrTabletDevice() {
+      const ua = navigator.userAgent || "";
+      const isMobileUA = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua);
+      const isTouchTablet = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) && (window.innerWidth <= 1366);
+      return Boolean(isMobileUA || isTouchTablet);
+    }
+
+    function syncCameraFacingSelectUI() {
+      const sel = document.getElementById("selectCameraFacing");
+      if (!sel) return;
+      const isMobile = detectMobileOrTabletDevice();
+      const activeFacing = preferredCameraFacing || (isMobile ? "environment" : "user");
+      sel.value = activeFacing;
+    }
+
+    async function onCameraFacingChoiceChange() {
+      const sel = document.getElementById("selectCameraFacing");
+      if (!sel) return;
+      preferredCameraFacing = sel.value === "user" ? "user" : "environment";
+      if (cameraStream) {
+        stopCamera();
+        await startCamera();
+      }
+    }
+
     async function startCamera() {
       const video = document.getElementById("videoElement");
       const overlay = document.getElementById("scannerOverlay");
@@ -4391,75 +4423,91 @@
       const btnStart = document.getElementById("btnStartCamera");
       const btnStop = document.getElementById("btnStopCamera");
       const statusMsg = document.getElementById("cameraStatusMsg");
+      const selFacing = document.getElementById("selectCameraFacing");
 
       try {
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-blue-50 text-blue-800 border border-blue-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengaktifkan sensor kamera...';
+        statusMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengaktifkan sensor kamera (Fast Scan)...';
 
         let stream = null;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error("Browser tidak mendukung akses kamera atau koneksi belum HTTPS/localhost.");
         }
-       const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "") ||
-          (navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
 
-        const tryOpenStream = async (videoConstraint) => {
+        const isMobile = detectMobileOrTabletDevice();
+        const chosenFacing = (selFacing && selFacing.value)
+          ? selFacing.value
+          : (preferredCameraFacing || (isMobile ? "environment" : "user"));
+        preferredCameraFacing = chosenFacing;
+        if (selFacing && selFacing.value !== chosenFacing) {
+          selFacing.value = chosenFacing;
+        }
+
+        let videoDevices = [];
+        try {
+          if (typeof navigator.mediaDevices.enumerateDevices === "function") {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            videoDevices = devices.filter(d => d.kind === "videoinput");
+          }
+        } catch (_) {}
+
+        const backCams = videoDevices.filter(d => /back|rear|environment|belakang/i.test(d.label || ""));
+        const frontCams = videoDevices.filter(d => /front|user|face|depan/i.test(d.label || ""));
+
+        const tryOpen = async (videoConstraint) => {
           return await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: false });
         };
 
-        let lastCameraErr = null;
-        if (isMobileDevice) {
-          // 1. Coba ambil daftar kamera untuk menarget kamera belakang spesifik
-          let backDeviceIds = [];
-          try {
-            if (typeof navigator.mediaDevices.enumerateDevices === "function") {
-              const devices = await navigator.mediaDevices.enumerateDevices();
-              const videoDevices = devices.filter(d => d.kind === "videoinput");
-              backDeviceIds = videoDevices
-                .filter(d => /back|rear|environment|belakang|0\b/i.test(d.label || ""))
-                .map(d => d.deviceId)
-                .filter(Boolean);
-              // Jika label belum terisi (karena belum pernah diberi izin), coba device terakhir (sering kamera belakang)
-              if (backDeviceIds.length === 0 && videoDevices.length > 1) {
-                backDeviceIds = [videoDevices[videoDevices.length - 1].deviceId].filter(Boolean);
-              }
-            }
-          } catch (_) {}
-
-          const mobileCandidates = [
-            ...backDeviceIds.map(devId => ({ deviceId: { exact: devId }, width: { ideal: 960 }, height: { ideal: 540 } })),
+        let lastErr = null;
+        if (chosenFacing === "environment") {
+          const envAttempts = [
+            ...backCams.map(cam => ({ deviceId: { exact: cam.deviceId }, width: { ideal: 960 }, height: { ideal: 540 } })),
+            { facingMode: { exact: "environment" }, width: { ideal: 960 }, height: { ideal: 540 } },
             { facingMode: { ideal: "environment" }, width: { ideal: 960 }, height: { ideal: 540 } },
             { facingMode: "environment" }
           ];
-
-          for (const vc of mobileCandidates) {
+          // Jika perangkat bukan HP/tablet (misalnya laptop) dan tidak ada kamera belakang, fallback ke kamera depan/default
+          if (!isMobile && backCams.length === 0) {
+            envAttempts.push(
+              ...frontCams.map(cam => ({ deviceId: { exact: cam.deviceId }, width: { ideal: 960 }, height: { ideal: 540 } })),
+              { facingMode: { ideal: "user" }, width: { ideal: 960 }, height: { ideal: 540 } },
+              { width: { ideal: 960 }, height: { ideal: 540 } },
+              true
+            );
+          }
+          for (const vc of envAttempts) {
             try {
-              stream = await tryOpenStream(vc);
+              stream = await tryOpen(vc);
               if (stream) break;
-            } catch (errAttempt) {
-              lastCameraErr = errAttempt;
+            } catch (e) {
+              lastErr = e;
             }
           }
+          if (!stream && isMobile) {
+            throw new Error("Kamera belakang tidak tersedia atau gagal dibuka di perangkat HP/tablet ini.");
+          }
         } else {
-          // Komputer / Laptop: pakai kamera/webcam yang tersedia
-          const desktopCandidates = [
+          const userAttempts = [
+            ...frontCams.map(cam => ({ deviceId: { exact: cam.deviceId }, width: { ideal: 960 }, height: { ideal: 540 } })),
+            { facingMode: { ideal: "user" }, width: { ideal: 960 }, height: { ideal: 540 } },
             { width: { ideal: 960 }, height: { ideal: 540 } },
             true
           ];
-          for (const vc of desktopCandidates) {
+          for (const vc of userAttempts) {
             try {
-              stream = await tryOpenStream(vc);
+              stream = await tryOpen(vc);
               if (stream) break;
-            } catch (errAttempt) {
-              lastCameraErr = errAttempt;
+            } catch (e) {
+              lastErr = e;
             }
           }
         }
 
         if (!stream) {
-          throw lastCameraErr || new Error("Tidak ada stream kamera yang berhasil dibuka.");
+          throw lastErr || new Error("Tidak ada stream kamera yang berhasil dibuka.");
         }
+
         cameraStream = stream;
         video.srcObject = stream;
         video.classList.remove("hidden");
@@ -4468,8 +4516,9 @@
         btnStart.classList.add("hidden");
         btnStop.classList.remove("hidden");
 
+        const labelKameraAktif = chosenFacing === "environment" ? "Kamera Belakang" : "Kamera Depan";
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-teal-50 text-hijau-800 border border-teal-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif (Fast Scan). Arahkan QR/Barcode santri atau buku ke area pemindai.';
+        statusMsg.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${labelKameraAktif} aktif (Fast Scan). Arahkan QR/Barcode santri atau buku ke area pemindai.`;
         startFastScanLoop(video);
       } catch (err) {
         const errName = (err && err.name) ? err.name : "";
@@ -4479,12 +4528,11 @@
         } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
           detailPesan = "Sensor kamera tidak ditemukan pada perangkat ini.";
         } else if (errName === "NotReadableError" || errName === "TrackStartError") {
-          detailPesan = "Kamera belakang gagal dikunci oleh sistem/browser (kemungkinan sedang dipakai proses lain atau bermasalah di driver HP). Coba tutup tab/aplikasi kamera lain atau restart HP.";
-        }
+          detailPesan = "Kamera belakang gagal dikunci oleh sistem/browser. Coba tutup tab/aplikasi kamera lain atau restart HP.";
         } else if (!window.isSecureContext) {
           detailPesan = "Kamera diblokir karena bukan koneksi HTTPS/localhost. Gunakan HTTPS atau Unggah File Barcode / input manual di bawah.";
         } else {
-          detailPesan = `${detailPesan} (${(err && err.message) ? err.message : "Cek izin browser"})`;
+          detailPesan = `${(err && err.message) ? err.message : detailPesan}`;
         }
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200";
