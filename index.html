@@ -4397,7 +4397,18 @@
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-blue-50 text-blue-800 border border-blue-200";
         statusMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengaktifkan sensor kamera...';
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        let stream = null;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Browser tidak mendukung akses kamera atau koneksi belum HTTPS/localhost.");
+        }
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
+        } catch (errEnv) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
         cameraStream = stream;
         video.srcObject = stream;
         video.classList.remove("hidden");
@@ -4410,9 +4421,22 @@
         statusMsg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Kamera aktif (Fast Scan). Arahkan QR/Barcode santri atau buku ke area pemindai.';
         startFastScanLoop(video);
       } catch (err) {
+        const errName = (err && err.name) ? err.name : "";
+        let detailPesan = "Kamera tidak dapat diakses.";
+        if (errName === "NotAllowedError" || errName === "PermissionDeniedError") {
+          detailPesan = "Izin kamera ditolak oleh browser/HP. Buka pengaturan situs/browser lalu izinkan Kamera.";
+        } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
+          detailPesan = "Sensor kamera tidak ditemukan pada perangkat ini.";
+        } else if (errName === "NotReadableError" || errName === "TrackStartError") {
+          detailPesan = "Kamera sedang digunakan aplikasi lain. Tutup aplikasi kamera lain lalu coba lagi.";
+        } else if (!window.isSecureContext) {
+          detailPesan = "Kamera diblokir karena bukan koneksi HTTPS/localhost. Gunakan HTTPS atau Unggah File Barcode / input manual di bawah.";
+        } else {
+          detailPesan = `${detailPesan} (${(err && err.message) ? err.message : "Cek izin browser"})`;
+        }
         statusMsg.classList.remove("hidden");
         statusMsg.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200";
-        statusMsg.innerHTML = '<i class="fa-solid fa-circle-info"></i> Kamera tidak terdeteksi. Gunakan input manual di bawah.';
+        statusMsg.innerHTML = `<i class="fa-solid fa-circle-info shrink-0"></i> <span>${detailPesan} Gunakan <strong>Unggah File Barcode</strong> atau <strong>input manual</strong> di bawah.</span>`;
       }
     }
 
