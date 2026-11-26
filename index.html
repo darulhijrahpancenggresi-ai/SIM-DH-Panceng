@@ -1206,29 +1206,38 @@
 
         <!-- 9. PUSAT LAPORAN RESMI & UNDUH PDF -->
         <section id="viewLaporan" class="hidden space-y-6">
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="shrink-0">
-              <h2 class="text-xl font-bold text-hijau-950">Pusat Laporan & Rekapitulasi</h2>
-              <p class="text-xs text-slate-500">
-              </p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2.5 justify-start lg:justify-end">
-              <select id="filterKelasLaporan" onchange="onKelasLaporanChange()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
-                <option value="ALL">Semua Kelas</option>
-              </select>
-              <select id="filterSiswaLaporan" onchange="renderOfficialReport()" class="text-xs px-3 py-2 border border-slate-300 rounded-xl font-bold bg-white text-hijau-950 focus:outline-none shadow-sm">
-                <option value="ALL">Semua Santri</option>
-              </select>
-              <button onclick="unduhLaporanPDF()" class="bg-amber-400 hover:bg-amber-500 text-hijau-950 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
-                <i class="fa-solid fa-file-pdf text-red-700"></i>
-                <span>Unduh Laporan PDF</span>
-              </button>
-              <button onclick="window.print()" class="bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition">
-                <i class="fa-solid fa-print"></i>
-                <span>Cetak Lembar Kerja</span>
-              </button>
-            </div>
-          </div>
+          <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+  <!-- Judul Halaman -->
+  <div class="flex items-center gap-2 shrink-0">
+    <span class="w-2.5 h-6 rounded-full bg-hijau-800"></span>
+    <h2 class="text-lg sm:text-xl font-bold text-hijau-950 tracking-tight">Pusat Laporan &amp; Rekapitulasi</h2>
+  </div>
+
+  <!-- Area Kontrol (Filter & Tombol) -->
+  <div class="flex flex-wrap items-center gap-2.5 justify-start xl:justify-end">
+    <!-- Grup Filter Dropdown -->
+    <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+      <select id="filterKelasLaporan" onchange="onKelasLaporanChange()" class="h-10 text-xs px-3.5 border border-slate-300 rounded-xl font-bold bg-slate-50 text-hijau-950 focus:outline-none focus:ring-2 focus:ring-hijau-800/20 shadow-sm transition">
+        <option value="ALL">Semua Kelas</option>
+      </select>
+      <select id="filterSiswaLaporan" onchange="renderOfficialReport()" class="h-10 text-xs px-3.5 border border-slate-300 rounded-xl font-bold bg-slate-50 text-hijau-950 focus:outline-none focus:ring-2 focus:ring-hijau-800/20 shadow-sm transition">
+        <option value="ALL">Semua Santri</option>
+      </select>
+    </div>
+
+    <!-- Grup Tombol Aksi (Terkunci Berdampingan) -->
+    <div class="flex items-center gap-2 shrink-0">
+      <button onclick="unduhLaporanPDF()" class="h-10 bg-amber-400 hover:bg-amber-500 text-hijau-950 font-bold text-xs px-4 rounded-xl flex items-center gap-2 shadow-sm hover:shadow transition shrink-0 whitespace-nowrap">
+        <i class="fa-solid fa-file-pdf text-red-700 text-sm"></i>
+        <span>Unduh Laporan PDF</span>
+      </button>
+      <button onclick="window.print()" class="h-10 bg-hijau-800 hover:bg-hijau-900 text-white font-bold text-xs px-4 rounded-xl flex items-center gap-2 shadow-sm hover:shadow transition shrink-0 whitespace-nowrap">
+        <i class="fa-solid fa-print text-sm"></i>
+        <span>Cetak Lembar Kerja</span>
+      </button>
+    </div>
+  </div>
+</div>
 
           <!-- Printable Sheet Frame -->
           <div id="printableArea" class="bg-white rounded-2xl border border-slate-300 shadow-lg p-8 max-w-4xl mx-auto">
