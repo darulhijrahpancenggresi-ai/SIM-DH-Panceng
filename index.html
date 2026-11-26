@@ -2590,26 +2590,33 @@
     }
 
     function refreshActiveViews() {
-      if (typeof renderAvatarTU === "function") renderAvatarTU();
-      if (typeof renderUploadedAssets === "function") renderUploadedAssets();
-      if (typeof updateDashboardMetrics === "function") updateDashboardMetrics();
-      if (typeof renderSiswaTable === "function") renderSiswaTable();
-      if (typeof renderKartuSiswa === "function") renderKartuSiswa();
-      if (typeof renderLembarRaport === "function") renderLembarRaport();
-      if (typeof renderBukuTable === "function") renderBukuTable();
-      if (typeof renderPeminjamanTable === "function") renderPeminjamanTable();
-      if (typeof renderSarprasTable === "function") renderSarprasTable();
-      if (typeof renderModulAjarGrid === "function") renderModulAjarGrid();
-      if (typeof renderRiwayatTable === "function") renderRiwayatTable();
-      if (typeof renderRiwayatPerpusTable === "function") renderRiwayatPerpusTable();
-      if (typeof renderOfficialReport === "function") renderOfficialReport();
-      if (typeof renderGuruGrid === "function") renderGuruGrid();
-      if (typeof renderKelasGrid === "function") renderKelasGrid();
-      if (typeof renderJurusanGrid === "function") renderJurusanGrid();
-      if (typeof renderMapelTable === "function") renderMapelTable();
-      if (typeof renderJadwalTable === "function") renderJadwalTable();
-      if (typeof renderNilaiTable === "function") renderNilaiTable();
-      if (typeof renderPengumumanGrid === "function") renderPengumumanGrid();
+      const fns = [
+        typeof renderAvatarTU === "function" ? renderAvatarTU : null,
+        typeof renderUploadedAssets === "function" ? renderUploadedAssets : null,
+        typeof updateDashboardMetrics === "function" ? updateDashboardMetrics : null,
+        typeof renderSiswaTable === "function" ? renderSiswaTable : null,
+        typeof renderKartuSiswa === "function" ? renderKartuSiswa : null,
+        typeof renderLembarRaport === "function" ? renderLembarRaport : null,
+        typeof renderBukuTable === "function" ? renderBukuTable : null,
+        typeof renderPeminjamanTable === "function" ? renderPeminjamanTable : null,
+        typeof renderSarprasTable === "function" ? renderSarprasTable : null,
+        typeof renderModulAjarGrid === "function" ? renderModulAjarGrid : null,
+        typeof renderRiwayatTable === "function" ? renderRiwayatTable : null,
+        typeof renderRiwayatPerpusTable === "function" ? renderRiwayatPerpusTable : null,
+        typeof renderOfficialReport === "function" ? renderOfficialReport : null,
+        typeof renderGuruGrid === "function" ? renderGuruGrid : null,
+        typeof renderKelasGrid === "function" ? renderKelasGrid : null,
+        typeof renderJurusanGrid === "function" ? renderJurusanGrid : null,
+        typeof renderMapelTable === "function" ? renderMapelTable : null,
+        typeof renderJadwalTable === "function" ? renderJadwalTable : null,
+        typeof renderNilaiTable === "function" ? renderNilaiTable : null,
+        typeof renderPengumumanGrid === "function" ? renderPengumumanGrid : null
+      ];
+      fns.forEach(fn => {
+        if (typeof fn === "function") {
+          try { fn(); } catch (e) { console.warn("Sync view warning:", fn.name, e); }
+        }
+      });
     }
 
     function resetDataKeDefault() {
@@ -5032,14 +5039,19 @@
         labelKelas.innerText = kText + sText;
       }
 
-      document.getElementById("repNpsn").innerText = DB.settings.npsn;
-      document.getElementById("repAlamat").innerText = DB.settings.alamat;
-      document.getElementById("repTelepon").innerText = DB.settings.telepon;
-      document.getElementById("repEmail").innerText = DB.settings.email;
-      document.getElementById("repTahunAjaran").innerText = DB.settings.tahunAjaran;
-      document.getElementById("repSemester").innerText = DB.settings.semester;
-      document.getElementById("repKepsekNama").innerText = DB.settings.kepalaSekolah;
-      document.getElementById("repKepsekNip").innerText = `NIP. ${DB.settings.nipKepalaSekolah}`;
+      const setTextSafe = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val ?? "";
+      };
+
+      setTextSafe("repNpsn", DB.settings?.npsn);
+      setTextSafe("repAlamat", DB.settings?.alamat);
+      setTextSafe("repTelepon", DB.settings?.telepon);
+      setTextSafe("repEmail", DB.settings?.email);
+      setTextSafe("repTahunAjaran", DB.settings?.tahunAjaran);
+      setTextSafe("repSemester", DB.settings?.semester);
+      setTextSafe("repKepsekNama", DB.settings?.kepalaSekolah);
+      setTextSafe("repKepsekNip", DB.settings?.nipKepalaSekolah ? `NIP. ${DB.settings.nipKepalaSekolah}` : "");
 
       const tbody = document.getElementById("reportTbody");
       if (!tbody) return;
