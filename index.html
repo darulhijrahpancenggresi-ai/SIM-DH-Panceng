@@ -4401,16 +4401,24 @@
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error("Browser tidak mendukung akses kamera atau koneksi belum HTTPS/localhost.");
         }
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-          });
-        } catch (errExact) {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-          });
+       const constraintsList = [
+          { video: { facingMode: { ideal: "environment" } }, audio: false },
+          { video: { facingMode: "environment" }, audio: false },
+          { video: true, audio: false }
+        ];
+
+        let lastCameraErr = null;
+        for (const constraint of constraintsList) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraint);
+            if (stream) break;
+          } catch (errAttempt) {
+            lastCameraErr = errAttempt;
+          }
+        }
+
+        if (!stream) {
+          throw lastCameraErr || new Error("Tidak ada stream kamera yang berhasil dibuka.");
         }
         cameraStream = stream;
         video.srcObject = stream;
